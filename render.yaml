@@ -1,0 +1,13 @@
+# 一键部署到 Render（免费套餐）配置
+# 用法：在 render.com 新建 Blueprint，连上含本文件的仓库即可。
+services:
+  - type: web
+    name: cute-news-backend
+    runtime: python
+    plan: free
+    region: singapore       # 离中国最近，延迟最低
+    buildCommand: "echo skip-build"
+    startCommand: "python news_server.py"
+    envVars:
+      - key: PORT
+        value: "10000"       # Render 免费套餐固定注入的端口
