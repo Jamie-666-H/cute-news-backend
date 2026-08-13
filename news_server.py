@@ -47,29 +47,31 @@ def save_sync():
         pass
 
 
+def _merge_value(lv, rv):
+    """递归合并单个值：对象递归合并键；数组按 id(无 id 则按内容) 去重取并集，冲突时远端优先。"""
+    if isinstance(rv, dict) and isinstance(lv, dict):
+        out = dict(lv)
+        for k, v in rv.items():
+            out[k] = _merge_value(out.get(k), v)
+        return out
+    if isinstance(rv, list) and isinstance(lv, list):
+        m = {}
+        def key(x):
+            return str(x['id']) if isinstance(x, dict) and 'id' in x else json.dumps(x, ensure_ascii=False, sort_keys=True)
+        for x in lv:
+            m[key(x)] = x
+        for x in rv:
+            m[key(x)] = x  # 远端优先
+        return list(m.values())
+    return rv if rv is not None else lv
+
+
 def merge_data(local, remote):
-    """递归合并两份数据：对象浅合并；数组按 id(无 id 则按内容) 去重取并集，冲突时远端优先。"""
-    out = copy.deepcopy(local)
+    """合并两份用户数据（递归），冲突时远端优先，updated 取较大值。"""
+    local = local or {}
+    remote = remote or {}
+    out = _merge_value(local, remote)
     out['updated'] = max(int(local.get('updated', 0) or 0), int(remote.get('updated', 0) or 0))
-    for k, v in remote.items():
-        if k == 'updated':
-            continue
-        lv = out.get(k)
-        if isinstance(v, list) and isinstance(lv, list):
-            def key(x):
-                return str(x['id']) if isinstance(x, dict) and 'id' in x else json.dumps(x, ensure_ascii=False, sort_keys=True)
-            m = {}
-            for x in lv:
-                m[key(x)] = x
-            for x in v:
-                m[key(x)] = x  # 远端优先
-            out[k] = list(m.values())
-        elif isinstance(v, dict) and isinstance(lv, dict):
-            merged = dict(lv)
-            merged.update(v)
-            out[k] = merged
-        else:
-            out[k] = v
     return out
 
 
