@@ -52,11 +52,11 @@ def crawl():
     """抓取五大平台，返回 {'updated': '...', 'items': [{title,url,src}...]}"""
     news = []
 
-    def add(title, url, src):
+    def add(title, url, src, hot=None):
         title = clean(title)
         if len(title) < 4 or not url:
             return
-        news.append({'title': title, 'url': url.strip(), 'src': src})
+        news.append({'title': title, 'url': url.strip(), 'src': src, 'hot': hot})
 
     # ---------- 1. 央视新闻 ----------
     try:
@@ -128,18 +128,38 @@ def crawl():
     except Exception as e:
         print('抖音 FAIL', e)
 
-    # ---------- 7. 小红书热点（平台无公开接口，取当天真实热词配小红书搜索，标题与链接一致）----------
+    # ---------- 7. 小红书热点（真实实时热榜：60s API /v2/rednote，含热度值；绝不搬微博）----------
     try:
-        seen = set(); cnt = 0
-        for n in news:
-            if n['src'] in ('微博热搜', '百度热点', '抖音热点') and n['title'] not in seen:
-                seen.add(n['title'])
-                add(n['title'], 'https://www.xiaohongshu.com/search_result?keyword=' + urllib.parse.quote(n['title']), '小红书热点')
-                cnt += 1
-                if cnt >= 20:
-                    break
+        xh = get('https://60s.viki.moe/v2/rednote', t=12)
+        j = json.loads(xh)
+        data = j.get('data') or []
+        cnt = 0
+        for it in data:
+            t = (it.get('title') or it.get('word') or '').strip()
+            u = it.get('link') or it.get('url') or ''
+            hot = it.get('score') or it.get('hot_value') or None
+            if not t or not u:
+                continue
+            add(t, u, '小红书热点', hot)
+            cnt += 1
+            if cnt >= 20:
+                break
+        if cnt == 0:
+            raise ValueError('xhs empty')
     except Exception as e:
-        print('小红书 FAIL', e)
+        print('小红书主源 FAIL', e)
+        try:
+            xh = get('https://uapis.cn/api/v1/misc/hotboard?type=xiaohongshu', t=12)
+            j = json.loads(xh)
+            data = j.get('list') or []
+            for it in data:
+                t = (it.get('title') or it.get('word') or '').strip()
+                u = it.get('url') or it.get('link') or ''
+                hot = it.get('hot_value') or it.get('score') or None
+                if t and u:
+                    add(t, u, '小红书热点', hot)
+        except Exception as e2:
+            print('小红书备用 FAIL', e2)
 
     # ---------- 平衡各平台条数 ----------
     by = defaultdict(list)
