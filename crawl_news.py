@@ -48,6 +48,15 @@ def uniq(items):
     return out
 
 
+def xhs_clean(u):
+    """小红书官方搜索页当前格式：去掉 type=51 等旧参数，否则 App 内打开报'页面不见了'。"""
+    if 'xiaohongshu.com' in u or 'xhslink.com' in u:
+        m = re.search(r'keyword=([^&]+)', u)
+        if m:
+            return 'https://www.xiaohongshu.com/search_result?keyword=' + m.group(1)
+    return u
+
+
 def crawl():
     """抓取五大平台，返回 {'updated': '...', 'items': [{title,url,src}...]}"""
     news = []
@@ -140,7 +149,7 @@ def crawl():
             hot = it.get('score') or it.get('hot_value') or None
             if not t or not u:
                 continue
-            add(t, u, '小红书热点', hot)
+            add(t, xhs_clean(u), '小红书热点', hot)
             cnt += 1
             if cnt >= 20:
                 break
@@ -157,7 +166,7 @@ def crawl():
                 u = it.get('url') or it.get('link') or ''
                 hot = it.get('hot_value') or it.get('score') or None
                 if t and u:
-                    add(t, u, '小红书热点', hot)
+                    add(t, xhs_clean(u), '小红书热点', hot)
         except Exception as e2:
             print('小红书备用 FAIL', e2)
 
