@@ -10,9 +10,11 @@
 运行:  python news_server.py   （可用 PORT 环境变量指定端口，默认 3000）
 依赖:  仅 Python 标准库，无需 pip install。
 """
-import os, sys, threading, time, json, copy
+import os, sys, threading, time, json, copy, re, random
+from collections import deque
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
+import urllib.request, urllib.parse as _uparse, urllib.error
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from crawl_news import crawl
@@ -97,6 +99,119 @@ def loop():
         time.sleep(INTERVAL)
 
 
+# ---------- 实时阅读源（多源保底，每次现抓、互不重复） ----------
+# 浏览器直连第三方网站会被 CORS 拦截，所以由后端代抓，再带 CORS 原样吐给前端。
+# 任一源可用即返回；全部故障才返回 ok:false，前端回退到内置离线库。
+READING_RECENT = deque(maxlen=20)
+READING_LOCK = threading.Lock()
+_READ_UA = {'User-Agent': 'Mozilla/5.0 (compatible; cute-workbench/1.0)'}
+
+def _http_text(url, timeout=9):
+    req = urllib.request.Request(url, headers=_READ_UA)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode('utf-8', 'ignore')
+
+def _strip_html(html):
+    html = re.sub(r'<script.*?</script>', '', html, flags=re.S | re.I)
+    html = re.sub(r'<style.*?</style>', '', html, flags=re.S | re.I)
+    text = re.sub(r'<[^>]+>', '', html)
+    text = re.sub(r'&nbsp;', ' ', text)
+    text = re.sub(r'&[a-z]+;', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+def _src_meiriyiwen():
+    """每日一文：随机一篇完整中文美文（真实网站，无限、不重复）。"""
+    obj = json.loads(_http_text('https://interface.meiriyiwen.com/article/random?dev=1', 10))
+    content = _strip_html(obj.get('content', '') or '')
+    title = (obj.get('title') or '每日一文').strip()
+    if len(content) < 80:
+        return None
+    return {'id': 'myw-' + str(obj.get('date', '') or title), 'title': title,
+            'author': (obj.get('author') or '').strip(), 'src': '每日一文',
+            'lang': 'zh', 'en': '', 'zh': content[:2200], 'link': ''}
+
+def _src_jinrishici():
+    """今日诗词：随机一首古诗词（含出处）。"""
+    obj = json.loads(_http_text('https://v2.jinrishici.com/one.json', 9))
+    if obj.get('status') != 'success':
+        return None
+    d = obj['data']
+    content = (d.get('content') or '').strip()
+    origin = d.get('origin') or {}
+    otitle = (origin.get('title') or '').strip()
+    oauthor = (origin.get('author') or '').strip()
+    ocontent = ''.join(origin.get('content') or [])
+    zh = content
+    if otitle:
+        zh += '\n——《' + otitle + '》' + (oauthor and (' ' + oauthor) or '')
+    if ocontent:
+        zh += '\n' + ocontent
+    if len(zh) < 8:
+        return None
+    return {'id': 'jrs-' + str(d.get('id') or content), 'title': (otitle or '今日诗词'),
+            'author': oauthor, 'src': '古诗文', 'lang': 'zh',
+            'en': '', 'zh': zh[:1600], 'link': ''}
+
+def _src_hitokoto():
+    """一言：文学/哲学/诗词等分类的随机句子（保底源，沙箱已验证稳定）。"""
+    cats = 'd,e,h,i,j,k'  # 文学/原创/影视/诗词/网易云/哲学
+    obj = json.loads(_http_text('https://v1.hitokoto.cn/?c=' + cats, 9))
+    hit = (obj.get('hitokoto') or '').strip()
+    if len(hit) < 6:
+        return None
+    frm = (obj.get('from') or '').strip()
+    who = (obj.get('from_who') or '').strip()
+    return {'id': 'hk-' + str(obj.get('id') or hit), 'title': (frm or '一言'),
+            'author': who or frm, 'src': '一言', 'lang': 'zh',
+            'en': '', 'zh': hit, 'link': ''}
+
+def _src_ted():
+    """TED 最新演讲 RSS：英文摘要（真实网站，无限、不重复）。"""
+    data = _http_text('https://pa.tedcdn.com/talks/rss', 10)
+    items = re.findall(r'<item>(.*?)</item>', data, flags=re.S)
+    if not items:
+        return None
+    it = random.choice(items)
+    def _cd(field):
+        m = re.search(r'<%s>(?:<!\[CDATA\[(.*?)\]\]>)?(.*?)</%s>' % (field, field), it, flags=re.S)
+        return (m.group(1) or m.group(2) or '').strip() if m else ''
+    title = _cd('title') or 'TED'
+    desc = _strip_html(_cd('description'))
+    link = _cd('link')
+    if len(desc) < 80:
+        return None
+    return {'id': 'ted-' + re.sub(r'\W+', '', title)[:40], 'title': title,
+            'author': 'TED', 'src': 'TED', 'lang': 'en',
+            'en': desc[:1800], 'zh': '', 'link': link}
+
+_READ_SOURCES = {
+    'ted':   [_src_ted],
+    'essay': [_src_meiriyiwen, _src_hitokoto],
+    'all':   [_src_meiriyiwen, _src_ted, _src_hitokoto],
+}
+
+def get_reading(kind):
+    order = _READ_SOURCES.get(kind, _READ_SOURCES['all'])
+    order = order[:]
+    random.shuffle(order)
+    last = None
+    for fn in order:
+        try:
+            item = fn()
+        except Exception:
+            continue
+        if not item or not (item.get('zh') or item.get('en')):
+            continue
+        last = item
+        with READING_LOCK:
+            if item['id'] in READING_RECENT:
+                continue
+            READING_RECENT.append(item['id'])
+        return item
+    return last  # 全部都撞上最近重复时，仍返回一篇，保证不空
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=ROOT, **k)
@@ -138,6 +253,16 @@ class Handler(SimpleHTTPRequestHandler):
             if rec is None:
                 rec = {'updated': 0, 'data': None}
             self._send_json(200, rec)
+            return
+        if p in ('/api/reading', '/api/reading/'):
+            rk = parse_qs(urlparse(self.path).query).get('type', ['all'])[0]
+            if rk not in ('all', 'essay', 'ted'):
+                rk = 'all'
+            item = get_reading(rk)
+            if item:
+                self._send_json(200, {'ok': True, **item})
+            else:
+                self._send_json(200, {'ok': False, 'error': 'no_source'})
             return
         return super().do_GET()
 
