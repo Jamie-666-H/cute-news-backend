@@ -14,7 +14,7 @@ import os, sys, threading, time, json, copy, re, random
 from collections import deque
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
-import urllib.request, urllib.parse as _uparse, urllib.error
+import urllib.request, urllib.parse as _uparse, urllib.error, base64
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from crawl_news import crawl
@@ -22,6 +22,70 @@ from crawl_news import crawl
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE = os.path.join(ROOT, 'news.json')
 SYNC_FILE = os.path.join(ROOT, 'sync_store.json')
+# ---------- 云端同步持久化（GitHub 文件为主，本地文件回退） ----------
+GITHUB_REPO = 'Jamie-666-H/cute-news-backend'
+GITHUB_SYNC_PATH = 'sync_store.json'
+GH_TOKEN = os.environ.get('GH_TOKEN')
+
+
+def _gh_get():
+    if not GH_TOKEN:
+        return None, None
+    try:
+        url = 'https://api.github.com/repos/%s/contents/%s' % (GITHUB_REPO, GITHUB_SYNC_PATH)
+        req = urllib.request.Request(url, headers={
+            'Accept': 'application/vnd.github+json',
+            'User-Agent': 'cute-sync',
+            'Authorization': 'Bearer ' + GH_TOKEN,
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            j = json.loads(r.read().decode('utf-8', 'ignore'))
+        if 'content' not in j:
+            return None, None
+        text = base64.b64decode(j['content']).decode('utf-8', 'ignore')
+        return json.loads(text), j.get('sha')
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None, None
+        return None, None
+    except Exception:
+        return None, None
+
+
+def _gh_put(store):
+    if not GH_TOKEN:
+        return False
+    for attempt in range(2):
+        try:
+            remote, sha = _gh_get()
+            if not isinstance(remote, dict):
+                remote = {}
+            merged = dict(remote)
+            for k, v in store.items():
+                if k in merged and isinstance(merged[k], dict) and isinstance(v, dict):
+                    merged[k] = merge_data(merged[k], v)
+                else:
+                    merged[k] = v
+            content = base64.b64encode(json.dumps(merged, ensure_ascii=False).encode('utf-8')).decode('ascii')
+            body = {'message': 'sync update', 'content': content}
+            if sha:
+                body['sha'] = sha
+            url = 'https://api.github.com/repos/%s/contents/%s' % (GITHUB_REPO, GITHUB_SYNC_PATH)
+            req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers={
+                'Accept': 'application/vnd.github+json',
+                'User-Agent': 'cute-sync',
+                'Authorization': 'Bearer ' + GH_TOKEN,
+            }, method='PUT')
+            urllib.request.urlopen(req, timeout=15).read()
+            return True
+        except urllib.error.HTTPError as e:
+            if e.code == 409 and attempt == 0:
+                continue
+            return False
+        except Exception:
+            return False
+    return False
+
 INTERVAL = 60  # 每 60 秒重新抓取一次
 
 cache = {'updated': '', 'items': []}
@@ -33,12 +97,19 @@ sync_lock = threading.Lock()
 
 def load_sync():
     global sync_store
+    if GH_TOKEN:
+        data, _ = _gh_get()
+        if isinstance(data, dict):
+            sync_store = data
+            return
     try:
         if os.path.exists(SYNC_FILE):
             with open(SYNC_FILE, 'r', encoding='utf-8') as f:
                 sync_store = json.load(f)
+            return
     except Exception:
-        sync_store = {}
+        pass
+    sync_store = {}
 
 
 def save_sync():
@@ -47,6 +118,11 @@ def save_sync():
             json.dump(sync_store, f, ensure_ascii=False)
     except Exception:
         pass
+    if GH_TOKEN:
+        try:
+            _gh_put(sync_store)
+        except Exception:
+            pass
 
 
 def _merge_value(lv, rv):
