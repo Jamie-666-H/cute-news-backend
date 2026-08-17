@@ -279,6 +279,9 @@
   .frame-add{background:repeating-linear-gradient(45deg,#fff,#fff 9px,#fff7fb 9px,#fff7fb 18px);border:2px dashed var(--pink);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--pink-deep);cursor:pointer;aspect-ratio:1/1;font-size:12px;gap:5px;transition:transform .14s;break-inside:avoid;margin-bottom:16px}
   .frame-add:hover{transform:rotate(-4deg) scale(1.04);background:#fff0f6}
   .frame-add .plus{font-size:30px;line-height:1}
+  .frame-feed{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 12px;align-items:start;margin-bottom:14px}
+  .frame-feed .frame{margin:0;margin-top:var(--mt,0)}
+  .frame-feed .frame-add{margin-bottom:0}
   .frame-more{break-inside:avoid;margin:4px 0 18px;display:flex;justify-content:center}
   .frame-more button{border:none;background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff;border-radius:22px;padding:9px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(255,143,177,.4);transition:transform .15s}
   .frame-more button:hover{transform:scale(1.06) rotate(-2deg)}
@@ -579,8 +582,14 @@ function load(){
     return d;
   }catch(e){ return defaults(); }
 }
-let DB = load();
-function save(){ DB.updated=Date.now(); try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ toast('存储空间不足啦，删掉一些旧记录再拍～'); } schedulePush(); }
+/* IndexedDB 本地持久化：容量远大于 localStorage(约5MB)，可容纳每天照片记录，不再报"空间不足" */
+const IDB_NAME='cute-workbench-idb', IDB_STORE='db', IDB_KEY='main';
+function idbOpen(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open(IDB_NAME,1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore(IDB_STORE); }catch(e){} }; r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }); }
+function idbSave(db){ return idbOpen().then(c=>new Promise((res,rej)=>{ const t=c.transaction(IDB_STORE,'readwrite'); t.objectStore(IDB_STORE).put(db,IDB_KEY); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); })); }
+function idbLoad(){ return idbOpen().then(c=>new Promise((res,rej)=>{ const t=c.transaction(IDB_STORE,'readonly'); const rq=t.objectStore(IDB_STORE).get(IDB_KEY); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>rej(rq.error); })); }
+async function loadIdb(){ let d=null; try{ d=await idbLoad(); }catch(e){} if(d){ const base=defaults(); for(const k in base){ if(!(k in d)) d[k]=base[k]; } if(!d.settings) d.settings=base.settings; if(!d.settings.daily) d.settings.daily=base.settings.daily; if(!d.updated) d.updated=0; DB=d; } else { DB=load(); } }
+let DB = defaults();
+function save(){ DB.updated=Date.now(); idbSave(DB).catch(()=>{}); try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){} schedulePush(); }
 
 /* ===================== 云端同步 ===================== */
 let _pushTimer=null, _suppressPush=false;
@@ -2140,12 +2149,14 @@ function bindGlobal(){
 }
 
 /* ===================== 启动 ===================== */
-function init(){
+async function init(){
   initShowAll();
   renderSidebar(); bindSidebar();
   bindView(); bindGlobal();
   setupAudio();
-  renderClock(); renderCheckin(); renderQuote(); renderView();
+  renderClock(); renderCheckin(); renderQuote();
+  try{ await loadIdb(); }catch(e){}
+  renderView();
   setInterval(renderClock,1000);
   // 云端同步：启动即拉取最新，之后每 45 秒自动双向同步
   injectSyncBadge();
