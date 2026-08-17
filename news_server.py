@@ -22,7 +22,11 @@ from crawl_news import crawl
 ROOT = os.path.dirname(os.path.abspath(__file__))
 CACHE_FILE = os.path.join(ROOT, 'news.json')
 SYNC_FILE = os.path.join(ROOT, 'sync_store.json')
+INTERVAL = 60  # 每 60 秒重新抓取一次
+
 # ---------- 云端同步持久化（GitHub 文件为主，本地文件回退） ----------
+# Render 临时盘会在重启/部署时清空，所以同步数据持久化到 GitHub 仓库文件，
+# 跨设备/跨部署都能拉到同一份。无 GH_TOKEN 时回退到本地 sync_store.json。
 GITHUB_REPO = 'Jamie-666-H/cute-news-backend'
 GITHUB_SYNC_PATH = 'sync_store.json'
 GH_TOKEN = os.environ.get('GH_TOKEN')
@@ -63,7 +67,7 @@ def _gh_put(store):
             merged = dict(remote)
             for k, v in store.items():
                 if k in merged and isinstance(merged[k], dict) and isinstance(v, dict):
-                    merged[k] = merge_data(merged[k], v)
+                    merged[k] = merge_data(merged[k], v)  # 本地刚推送的优先
                 else:
                     merged[k] = v
             content = base64.b64encode(json.dumps(merged, ensure_ascii=False).encode('utf-8')).decode('ascii')
@@ -80,13 +84,12 @@ def _gh_put(store):
             return True
         except urllib.error.HTTPError as e:
             if e.code == 409 and attempt == 0:
-                continue
+                continue  # 并发冲突，重试一次
             return False
         except Exception:
             return False
     return False
 
-INTERVAL = 60  # 每 60 秒重新抓取一次
 
 cache = {'updated': '', 'items': []}
 cache_lock = threading.Lock()
@@ -97,11 +100,13 @@ sync_lock = threading.Lock()
 
 def load_sync():
     global sync_store
+    # 优先从 GitHub 拉（持久、跨部署/重启）
     if GH_TOKEN:
         data, _ = _gh_get()
         if isinstance(data, dict):
             sync_store = data
             return
+    # 回退本地文件
     try:
         if os.path.exists(SYNC_FILE):
             with open(SYNC_FILE, 'r', encoding='utf-8') as f:
@@ -113,11 +118,13 @@ def load_sync():
 
 
 def save_sync():
+    # 回退本地临时文件
     try:
         with open(SYNC_FILE, 'w', encoding='utf-8') as f:
             json.dump(sync_store, f, ensure_ascii=False)
     except Exception:
         pass
+    # 主存储 GitHub（持久）
     if GH_TOKEN:
         try:
             _gh_put(sync_store)
@@ -263,8 +270,8 @@ def _src_ted():
 
 _READ_SOURCES = {
     'ted':   [_src_ted],
-    'essay': [_src_meiriyiwen, _src_hitokoto],
-    'all':   [_src_meiriyiwen, _src_ted, _src_hitokoto],
+    'essay': [_src_meiriyiwen, _src_jinrishici, _src_hitokoto],
+    'all':   [_src_meiriyiwen, _src_jinrishici, _src_ted, _src_hitokoto],
 }
 
 def get_reading(kind):
@@ -380,6 +387,25 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_response(405)
         self.end_headers()
         self.wfile.write(b'Method Not Allowed')
+
+    def guess_type(self, path):
+        # 确保 PWA 清单 / Service Worker 的 MIME 正确，否则浏览器拒绝安装或注册
+        if path.endswith('.webmanifest'):
+            return 'application/manifest+json'
+        if path.endswith('.json'):
+            return 'application/json'
+        if path.endswith('.js'):
+            return 'text/javascript'
+        if path.endswith('.png') or path.endswith('.ico'):
+            return 'image/x-icon' if path.endswith('.ico') else 'image/png'
+        return super().guess_type(path)
+
+    def end_headers(self):
+        # 静态资源不缓存，保证 push 后前端立即更新（API / news.json 自带 no-store，跳过）
+        p = self.path.split('?')[0]
+        if not p.startswith('/api/') and p != '/news.json':
+            self.send_header('Cache-Control', 'no-cache')
+        super().end_headers()
 
     def log_message(self, *a):
         pass

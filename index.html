@@ -1,0 +1,2173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, minimum-scale=1, user-scalable=no">
+<title>我的小天地 · 粉色工作台</title>
+<style>
+  :root{
+    --pink:#ff9ec4;
+    --pink-deep:#ff6fa5;
+    --pink-soft:#ffd9e8;
+    --bg:#fff5f8;
+    --card:#ffffff;
+    --text:#6b4555;
+    --text-soft:#a98295;
+    --line:#ffe1ec;
+    --shadow:0 8px 24px rgba(255,143,177,.18);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+    background:linear-gradient(135deg,#fff0f6 0%,#ffe3ef 100%);
+    color:var(--text);
+    display:flex;
+    min-height:100vh;
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+  /* ---------- 侧边栏 ---------- */
+  .sidebar{
+    width:240px;
+    flex-shrink:0;
+    background:rgba(255,255,255,.75);
+    backdrop-filter:blur(8px);
+    border-right:2px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    padding:18px 14px;
+  }
+  .brand{
+    text-align:center;
+    margin-bottom:18px;
+  }
+  .brand .logo{font-size:34px}
+  .brand h1{font-size:19px;color:var(--pink-deep);margin-top:4px;letter-spacing:1px}
+  .brand p{font-size:11px;color:var(--text-soft);margin-top:2px}
+  .nav{list-style:none;flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 13px;
+    border-radius:14px;
+    cursor:pointer;
+    color:var(--text);
+    font-size:15px;font-weight:600;
+    transition:all .18s ease;
+    user-select:none;
+    border:2px solid transparent;
+  }
+  .nav-item:hover{background:var(--pink-soft);transform:translateX(3px)}
+  .nav-item.active{
+    background:linear-gradient(135deg,var(--pink),var(--pink-deep));
+    color:#fff;box-shadow:var(--shadow);
+  }
+  .nav-icon{
+    width:34px;height:34px;flex-shrink:0;
+    display:grid;place-items:center;
+    background:var(--pink-soft);
+    border-radius:11px;font-size:18px;
+  }
+  .nav-item.active .nav-icon{background:rgba(255,255,255,.3)}
+  .nav-hint{font-size:10px;color:var(--text-soft);text-align:center;margin-bottom:8px}
+  .gear{
+    margin-top:10px;padding:10px;border:none;border-radius:14px;
+    background:var(--pink-soft);color:var(--pink-deep);
+    font-size:14px;font-weight:700;cursor:pointer;width:100%;
+  }
+  .gear:hover{background:var(--pink);color:#fff}
+  .gear-top{display:none}
+  /* ---------- 主区域 ---------- */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 26px;gap:18px;
+    background:rgba(255,255,255,.6);
+    border-bottom:2px solid var(--line);
+  }
+  .clock-box{display:flex;flex-direction:column}
+  .clock{font-size:38px;font-weight:800;color:var(--pink-deep);line-height:1;font-variant-numeric:tabular-nums}
+  .date{font-size:13px;color:var(--text-soft);margin-top:6px}
+  .checkin-box{display:flex;align-items:center;gap:14px}
+  .checkin-btn{
+    border:none;border-radius:16px;padding:12px 22px;
+    background:linear-gradient(135deg,var(--pink),var(--pink-deep));
+    color:#fff;font-size:15px;font-weight:700;cursor:pointer;
+    box-shadow:var(--shadow);transition:transform .15s;
+  }
+  .checkin-btn:hover{transform:scale(1.04)}
+  .checkin-btn.done{background:#cdebd2;color:#3f9c5a;box-shadow:none}
+  .streak{font-size:13px;color:var(--text-soft);font-weight:600}
+  .quote-box{
+    margin:0 26px;margin-top:16px;
+    background:rgba(255,255,255,.7);
+    border:2px dashed var(--pink);
+    border-radius:var(--radius);
+    padding:14px 20px;text-align:center;
+  }
+  .quote-cn{font-size:17px;font-weight:700;color:var(--pink-deep)}
+  .quote-en{font-size:13px;color:var(--text-soft);margin-top:5px;font-style:italic}
+  .quote-tag{font-size:11px;color:var(--text-soft);margin-bottom:4px}
+  /* ---------- 视图 ---------- */
+  .view-wrap{flex:1;overflow-y:auto;padding:22px 26px 40px}
+  .mod-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+  .mod-head h2{font-size:22px;color:var(--pink-deep)}
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stats span{background:var(--pink-soft);color:var(--pink-deep);font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px}
+  .tabs{display:flex;gap:8px;margin-bottom:14px}
+  .tabs button{
+    border:2px solid var(--line);background:#fff;color:var(--text-soft);
+    padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;
+  }
+  .tabs button.on{background:var(--pink);border-color:var(--pink);color:#fff}
+  .tabs button.clear{margin-left:auto;border-color:#ffd0d0;color:#e07a8b}
+  .add-form{
+    display:flex;gap:8px;flex-wrap:wrap;background:var(--card);
+    padding:14px;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px;
+  }
+  .add-form input,.add-form select{
+    border:2px solid var(--line);border-radius:12px;padding:9px 12px;font-size:14px;
+    color:var(--text);background:#fff5f8;outline:none;flex:1;min-width:120px;
+  }
+  .add-form input:focus,.add-form select:focus{border-color:var(--pink)}
+  .add-form button{
+    border:none;border-radius:12px;padding:9px 20px;
+    background:linear-gradient(135deg,var(--pink),var(--pink-deep));
+    color:#fff;font-weight:700;font-size:14px;cursor:pointer;flex-shrink:0;
+  }
+  .add-form button:hover{filter:brightness(1.05)}
+  .list{display:flex;flex-direction:column;gap:10px}
+  .item{
+    display:flex;align-items:center;gap:12px;
+    background:var(--card);border-radius:14px;padding:12px 16px;
+    box-shadow:0 4px 14px rgba(255,143,177,.10);
+  }
+  .item.done{opacity:.55}
+  .item .chk{display:flex;align-items:center;gap:10px;flex:1;cursor:pointer}
+  .item .chk input{width:18px;height:18px;accent-color:var(--pink-deep)}
+  .item .title{font-weight:700;font-size:15px}
+  .item .meta{font-size:12px;color:var(--text-soft);margin-top:3px}
+  .item .sub{font-size:12px;color:var(--text-soft)}
+  .item .del,.item .star{
+    border:none;background:var(--pink-soft);border-radius:10px;
+    width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;
+  }
+  .item .del:hover{background:#ffd0d0}
+  .item .star.on{background:var(--pink);color:#fff}
+  .empty{text-align:center;color:var(--text-soft);padding:30px;font-size:14px}
+  .pill{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--pink-soft);color:var(--pink-deep);font-weight:700}
+  .pos{color:#3f9c5a;font-weight:700}
+  .neg{color:#e07a8b;font-weight:700}
+  .cet6-title{font-size:14px;font-weight:700;color:var(--pink-deep);margin:2px 0 10px}
+  .cet6{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:18px}
+  .cet6-card{background:linear-gradient(135deg,#fff,#fff0f6);border:2px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 4px 14px rgba(255,143,177,.12)}
+  .cet6-w{font-size:18px;font-weight:800;color:var(--pink-deep)}
+  .cet6-pos{font-size:12px;color:var(--text-soft);font-weight:600;margin-left:6px}
+  .cet6-cn{font-size:14px;margin-top:4px;color:var(--text)}
+  .cet6-ex{font-size:12px;color:var(--text-soft);margin-top:8px;line-height:1.5}
+  .cet6-act{display:flex;gap:8px;margin-top:10px}
+  .cet6-act button{flex:1;border:none;border-radius:12px;padding:8px;font-weight:700;font-size:13px;cursor:pointer}
+  .spk{border:none;background:var(--pink-soft);color:var(--pink-deep);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;margin-left:8px;flex-shrink:0;vertical-align:middle;transition:transform .12s}
+  .spk:hover{background:var(--pink);color:#fff;transform:scale(1.08)}
+  .spk:active{transform:scale(.94)}
+  .spk.mini{width:24px;height:24px;font-size:11px;margin-left:5px}
+  /* 英语学习：2×2 单词卡 + 巩固小游戏 */
+  .eng-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+  .eng-card{background:linear-gradient(135deg,#fff,#fff0f6);border:2px solid var(--line);border-radius:14px;padding:11px 12px;box-shadow:0 3px 10px rgba(255,143,177,.10)}
+  .eng-w{font-size:17px;font-weight:800;color:var(--pink-deep);display:flex;align-items:center;gap:6px}
+  .eng-w .spk{margin-left:auto}
+  .eng-ph{font-size:12px;color:var(--text-soft);margin-top:3px;font-style:italic;letter-spacing:.3px}
+  .eng-pos{font-style:normal;margin-left:5px;font-weight:600}
+  .eng-cn{font-size:13px;color:var(--text);margin-top:3px;line-height:1.4}
+  .eng-game{background:#fff;border:2px dashed var(--pink);border-radius:16px;padding:16px;box-shadow:0 4px 14px rgba(255,143,177,.10)}
+  .eng-game-head{font-weight:800;color:var(--pink-deep);font-size:15px;display:flex;align-items:center;gap:8px}
+  .eng-start{margin-top:6px;border:none;border-radius:12px;padding:10px 18px;font-weight:800;font-size:14px;cursor:pointer}
+  .eng-q{margin:12px 0 4px;font-size:16px}
+  .eng-q-w{font-weight:800;color:var(--pink-deep);font-size:22px}
+  .eng-q-cn{font-weight:800;font-size:19px;color:var(--pink-deep)}
+  .eng-q-sub{font-size:13px;color:var(--text-soft);margin-top:5px}
+  .eng-opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .eng-opt{border:2px solid var(--line);background:#fff;color:var(--text);border-radius:12px;padding:11px 10px;font-size:14px;font-weight:600;cursor:pointer;transition:.12s;word-break:break-word}
+  .eng-opt:hover:not(:disabled){border-color:var(--pink)}
+  .eng-opt.correct{background:#e7f8ec;border-color:#56c47a;color:#1f8a45}
+  .eng-opt.wrong{background:#ffeaea;border-color:#ff8aa0;color:#d6336c}
+  .eng-fb{margin-top:10px;font-weight:700;font-size:14px}
+  .eng-fb.ok{color:#1f8a45}
+  .eng-fb.no{color:#d6336c}
+  .eng-next{border:none;border-radius:12px;padding:9px 18px;font-weight:800;cursor:pointer}
+  .eng-result{font-size:20px;margin:10px 0}
+  .eng-result b{color:var(--pink-deep)}
+  .eng-emoji{font-size:15px;margin-bottom:12px}
+  .eng-stages{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+  .eng-chip{font-size:12px;font-weight:700;background:var(--pink-soft);color:var(--pink-deep);border-radius:20px;padding:4px 10px}
+  .eng-play{border:2px solid var(--pink);background:#fff;color:var(--pink-deep);border-radius:12px;padding:11px 18px;font-weight:800;font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .eng-play:hover{background:var(--pink);color:#fff}
+  .eng-slots{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 4px;justify-content:center}
+  .eng-slot{width:34px;height:40px;border:2px dashed var(--pink);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:var(--pink-deep);text-transform:lowercase}
+  .eng-slot.filled{border-style:solid;background:var(--pink-soft)}
+  .eng-tiles{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;justify-content:center}
+  .eng-tile{border:2px solid var(--line);background:#fff;color:var(--pink-deep);border-radius:10px;width:38px;height:42px;font-size:19px;font-weight:800;cursor:pointer;text-transform:lowercase;transition:.12s}
+  .eng-tile:hover:not(:disabled){border-color:var(--pink);transform:translateY(-2px)}
+  .eng-tile.used{opacity:.3;cursor:default}
+  /* 阅读 / 新闻 卡片 */
+  .mute{color:var(--text-soft);font-size:13px}
+  .reader{background:var(--card);border-radius:var(--radius);padding:20px 22px;box-shadow:var(--shadow)}
+  .reader-card h3{font-size:18px;color:var(--pink-deep);margin-bottom:4px}
+  .reader-card .au{font-size:12px;color:var(--text-soft);margin-bottom:12px}
+  .read-en{font-size:15px;line-height:2;color:var(--text)}
+  .read-zh{font-size:14px;line-height:1.8;color:var(--text-soft);margin-top:8px}
+  .read-note{margin-top:14px;background:var(--pink-soft);border-radius:12px;padding:10px 14px;font-size:13px;color:var(--pink-deep)}
+  .read-link{margin-top:12px}
+  .read-link a{display:inline-block;font-size:13px;font-weight:700;color:var(--pink-deep);text-decoration:none;background:var(--pink-soft);padding:6px 14px;border-radius:20px}
+  .read-link a:active{opacity:.7}
+  .src-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;margin-bottom:8px;background:var(--pink-soft);color:var(--pink-deep)}
+  .src-tag.ted{background:linear-gradient(135deg,#e8416f,#ff7eb3);color:#fff}
+  .read-filters{display:flex;gap:8px;margin:10px 0 2px;flex-wrap:wrap}
+  .read-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 2px}
+  .read-top .read-filters{flex:1;margin:0;min-width:200px}
+  .read-refresh{white-space:nowrap;flex:0 0 auto;font-size:13px;padding:7px 16px}
+  .b-chip{font-size:13px;padding:6px 14px;border-radius:20px;border:1px solid var(--pink-soft);background:#fff;color:var(--pink-deep);cursor:pointer;transition:.15s}
+  .b-chip.on{background:linear-gradient(135deg,#e8416f,#ff7eb3);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(232,65,111,.25)}
+  .read-quiz{margin-top:16px;background:linear-gradient(135deg,#fff,#fff6fa);border:1px solid var(--pink-soft);border-radius:14px;padding:14px 16px}
+  .rq-head{font-size:13px;font-weight:700;color:var(--pink-deep);margin-bottom:10px}
+  .rq-q{margin-bottom:12px}
+  .rq-q:last-child{margin-bottom:0}
+  .rq-qw{font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text)}
+  .rq-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .rq-opt{font-size:13px;padding:9px 10px;border-radius:10px;border:1px solid var(--pink-soft);background:#fff;color:var(--text);cursor:pointer;text-align:left;transition:.15s;line-height:1.4}
+  .rq-opt:hover:not(:disabled){border-color:#ff7eb3;background:#fff0f6}
+  .rq-opt:disabled{cursor:default}
+  .rq-opt.correct{background:#e8f8ee;border-color:#52c98a;color:#1d8a55;font-weight:700}
+  .rq-opt.wrong{background:#fdeaea;border-color:#e8696b;color:#c0392b}
+  .rq-fb{font-size:12px;margin-top:6px}
+  .rq-fb.ok{color:#1d8a55}
+  .rq-fb.no{color:#c0392b}
+  .rq-result{font-size:15px;margin:6px 0 4px;color:var(--text)}
+  .rq-result b{color:var(--pink-deep);font-size:18px}
+  .rq-emoji{font-size:14px;margin-bottom:12px}
+  .rq-start{font-size:14px;padding:10px 22px;border-radius:22px;border:none;cursor:pointer}
+  .reader-card .spk{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--pink);background:#fff;color:var(--pink-deep);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;margin-top:10px}
+  .reader-card .spk:hover{background:var(--pink);color:#fff}
+  .reader-body{font-size:14px;line-height:1.8;color:var(--text);white-space:pre-wrap}
+  /* 卡片网格（书/新闻等） */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .card{background:var(--card);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(255,143,177,.10);position:relative}
+  .card h3{font-size:15px;color:var(--pink-deep);margin-bottom:4px}
+  .card .au{font-size:12px;color:var(--text-soft);margin-bottom:8px}
+  .card .row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-soft);margin-top:4px}
+  .card a{color:var(--pink-deep);font-weight:700;text-decoration:none;font-size:13px}
+  .card .del{position:absolute;top:10px;right:10px}
+  /* --- 心情相框（随手拍小相框 · 俏皮乱摆版） --- */
+  .mood-tip{font-size:12px;color:var(--text-soft);margin:2px 0 12px}
+  .frame-feed{column-width:160px;column-gap:14px;margin-top:8px}
+  @media(min-width:640px){ .frame-feed{column-width:172px;column-gap:16px} }
+  .frame{break-inside:avoid;margin:0 0 16px;background:var(--bg,#fff);padding:8px 8px 6px;box-shadow:0 5px 16px rgba(255,143,177,.16);position:relative;transition:transform .18s;will-change:transform;transform:rotate(var(--rot,0deg)) translateX(var(--dx,0));margin-top:var(--mt,0);border-radius:var(--br,14px)}
+  .frame:hover{transform:rotate(var(--rot,0deg)) scale(1.04);z-index:3}
+  .frame-photo{position:relative;width:100%;aspect-ratio:1/1;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#ffe9f1,#eaf1ff);cursor:default}
+  .frame-photo.viewable{cursor:pointer}
+  .frame-photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .frame-photo .ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#e79bb4;font-size:12px;gap:5px}
+  .frame-photo .ph .cam{font-size:30px}
+  .frame-deco{position:absolute;top:-10px;left:50%;transform:translateX(-50%) rotate(-7deg);font-size:15px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.08));pointer-events:none}
+  .frame-x{position:absolute;top:5px;right:5px;width:22px;height:22px;border:none;border-radius:50%;background:rgba(255,255,255,.85);color:#e06b8a;font-size:14px;line-height:1;cursor:pointer}
+  .frame-swap{position:absolute;bottom:5px;right:5px;width:24px;height:24px;border:none;border-radius:50%;background:rgba(255,255,255,.9);font-size:13px;line-height:1;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+  .frame-swap:hover{background:#fff}
+  .frame-cap{width:100%;border:none;background:transparent;resize:none;margin-top:8px;font:inherit;font-size:12.5px;line-height:1.5;color:var(--text);min-height:32px;box-sizing:border-box;padding:2px}
+  .frame-cap:focus{outline:none}
+  .frame-cap::placeholder{color:#d9a7b8}
+  .frame-add{background:repeating-linear-gradient(45deg,#fff,#fff 9px,#fff7fb 9px,#fff7fb 18px);border:2px dashed var(--pink);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--pink-deep);cursor:pointer;aspect-ratio:1/1;font-size:12px;gap:5px;transition:transform .14s;break-inside:avoid;margin-bottom:16px}
+  .frame-add:hover{transform:rotate(-4deg) scale(1.04);background:#fff0f6}
+  .frame-add .plus{font-size:30px;line-height:1}
+  .frame-more{break-inside:avoid;margin:4px 0 18px;display:flex;justify-content:center}
+  .frame-more button{border:none;background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff;border-radius:22px;padding:9px 18px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(255,143,177,.4);transition:transform .15s}
+  .frame-more button:hover{transform:scale(1.06) rotate(-2deg)}
+  /* 心情相框 · 日期翻看 & 当日手账 */
+  .plog-bar{display:flex;align-items:center;gap:6px;background:var(--card);border-radius:16px;padding:7px 9px;box-shadow:0 4px 14px rgba(255,143,177,.12);margin:6px 0 12px}
+  .plog-bar .nav{border:none;background:var(--pink-soft);color:var(--pink-deep);width:28px;height:28px;border-radius:9px;font-size:17px;line-height:1;cursor:pointer;flex-shrink:0;transition:transform .12s,background .12s}
+  .plog-bar .nav:hover{transform:scale(1.12);background:#ffd9e7}
+  .plog-bar .cur{flex:1;border:2px solid var(--line);background:linear-gradient(135deg,#ffffff,#fff5fa);color:var(--pink-deep);font-weight:700;font-size:13.5px;font-family:inherit;cursor:pointer;border-radius:13px;padding:7px 8px;display:flex;align-items:center;justify-content:center;gap:5px;transition:transform .12s,border-color .12s}
+  .plog-bar .cur:hover{transform:scale(1.02);border-color:var(--pink)}
+  .plog-bar .cur .bk{font-size:14px}
+  .plog-bar .today{border:none;background:var(--pink);color:#fff;border-radius:11px;padding:5px 10px;font-size:11.5px;font-weight:700;cursor:pointer;flex-shrink:0}
+  .plog-daylabel{font-size:12px;color:var(--text-soft);margin:10px 2px 4px;display:flex;align-items:center;gap:4px}
+  .plog-daynote{width:100%;border:2px dashed var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:13px;line-height:1.5;color:var(--text);box-sizing:border-box;background:#fffdfe;resize:vertical;min-height:46px;margin-bottom:6px}
+  .plog-daynote:focus{outline:none;border-color:var(--pink)}
+  .plog-daynote::placeholder{color:#d9a7b8}
+  /* 长按多选删除 */
+  .frame{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .frame-cap{user-select:text;-webkit-user-select:text}
+  .frame.sel{outline:3px solid var(--pink);outline-offset:2px}
+  .frame.sel::after{content:'✓';position:absolute;top:6px;left:6px;width:22px;height:22px;border-radius:50%;background:var(--pink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;z-index:6}
+  .frame.sel .frame-x{display:none}
+  .frame-selhit{position:absolute;inset:0;z-index:5;cursor:pointer}
+  .frame-selhit:active{background:rgba(255,143,177,.10)}
+  .frame-selbar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;gap:10px;justify-content:center;padding:12px;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);box-shadow:0 -4px 18px rgba(255,143,177,.28);border-top:2px solid var(--pink)}
+  .frame-selbar button{border:none;border-radius:22px;padding:11px 20px;font:inherit;font-weight:700;cursor:pointer;font-size:14px}
+  .frame-selbar .del{background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff;box-shadow:0 4px 12px rgba(255,143,177,.45)}
+  .frame-selbar .cancel{background:#fff;color:var(--text-soft);border:2px solid var(--line)}
+  .selmode .frame-feed{padding-bottom:72px}
+  /* 日历弹窗（日历本） */
+  .cal-mask{position:fixed;inset:0;z-index:80;background:rgba(255,180,205,.30);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:18px}
+  .cal-mask.show{display:flex}
+  .cal-pop{width:300px;max-width:92vw;background:#fff;border-radius:22px;box-shadow:0 14px 44px rgba(232,65,111,.34);overflow:hidden;position:relative;animation:calIn .18s ease}
+  @keyframes calIn{from{transform:scale(.92) translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .cal-head{background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;position:relative}
+  .cal-head::before{content:'';position:absolute;left:16px;top:0;width:8px;height:100%;background:repeating-linear-gradient(180deg,rgba(255,255,255,.35) 0 4px,transparent 4px 9px)}
+  .cal-head .ttl{font-weight:800;font-size:15px;display:flex;align-items:center;gap:6px;margin:0 auto}
+  .cal-head .mnav{border:none;background:rgba(255,255,255,.25);color:#fff;width:30px;height:30px;border-radius:9px;font-size:16px;line-height:1;cursor:pointer;transition:background .12s}
+  .cal-head .mnav:hover{background:rgba(255,255,255,.45)}
+  .cal-week{display:grid;grid-template-columns:repeat(7,1fr);padding:9px 10px 0;color:var(--text-soft);font-size:11px;text-align:center;font-weight:700}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;padding:6px 10px 12px}
+  .cal-grid button{border:none;background:transparent;color:var(--text);font:inherit;font-size:13px;aspect-ratio:1/1;border-radius:11px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;transition:background .12s}
+  .cal-grid button:hover{background:var(--pink-soft)}
+  .cal-grid button.muted{color:#dcc6d0}
+  .cal-grid button.todaycell{background:var(--pink-soft);font-weight:800;color:var(--pink-deep)}
+  .cal-grid button.selcell{background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff;font-weight:800;box-shadow:0 4px 10px rgba(232,65,111,.4)}
+  .cal-grid button .dot{position:absolute;bottom:5px;width:4px;height:4px;border-radius:50%;background:var(--pink)}
+  .cal-grid button.selcell .dot,.cal-grid button.todaycell .dot{background:#fff}
+  .cal-foot{display:flex;gap:8px;padding:0 12px 14px}
+  .cal-foot button{flex:1;border:none;border-radius:13px;padding:10px;font:inherit;font-weight:700;font-size:13px;cursor:pointer}
+  .cal-foot .today{background:var(--pink);color:#fff}
+  .cal-foot .close{background:#fff;color:var(--text-soft);border:2px solid var(--line)}
+  /* 设置弹窗 */
+  .modal-mask{position:fixed;inset:0;background:rgba(107,69,85,.35);display:none;place-items:center;z-index:50}
+  .modal-mask.show{display:grid}
+  .modal{background:#fff;border-radius:22px;padding:26px;width:420px;max-width:92vw;max-height:86vh;overflow-y:auto;box-shadow:var(--shadow)}
+  .modal h3{color:var(--pink-deep);margin-bottom:14px;font-size:20px}
+  .modal h4{color:var(--text);font-size:14px;margin:16px 0 8px}
+  .modal label.opt{display:flex;align-items:center;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px dashed var(--line)}
+  .modal .btn-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .modal .btn-row button{flex:1;border:none;border-radius:12px;padding:11px;font-weight:700;cursor:pointer;font-size:14px}
+  .b-pink{background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff}
+  .b-soft{background:var(--pink-soft);color:var(--pink-deep)}
+  .b-red{background:#ffe0e0;color:#d9534f}
+  .modal .close{float:right;border:none;background:none;font-size:22px;color:var(--text-soft);cursor:pointer}
+  /* 心情相框 · 查看大图 */
+  .photo-viewer{position:fixed;inset:0;background:rgba(40,25,35,.85);display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;z-index:60}
+  .photo-viewer.show{display:flex}
+  .photo-viewer img{max-width:92vw;max-height:72vh;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.45);background:#fff;object-fit:contain}
+  .photo-viewer .pv-cap{color:#fff;margin-top:14px;font-size:15px;max-width:92vw;text-align:center;opacity:.92;line-height:1.5;word-break:break-word}
+  .photo-viewer .pv-close{position:absolute;top:18px;right:20px;width:42px;height:42px;border:none;border-radius:50%;background:rgba(255,255,255,.92);font-size:24px;font-weight:700;cursor:pointer;color:#b8527a;line-height:1}
+  .photo-viewer .pv-hint{position:absolute;bottom:18px;color:#fff;opacity:.6;font-size:12px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--pink-deep);color:#fff;padding:11px 22px;border-radius:20px;font-size:14px;font-weight:700;opacity:0;transition:opacity .3s;z-index:99;pointer-events:none}
+  .toast.show{opacity:1}
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--pink-soft);border-radius:8px}
+  /* 手机端：侧边栏变底部 Tab 栏 */
+  /* 音乐播放器 */
+  .np{background:var(--card);border-radius:20px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
+  .np-top{display:flex;gap:16px;align-items:center}
+  .np-cover{width:84px;height:84px;border-radius:18px;background:linear-gradient(135deg,#ffd6e6,#ff9ecd);display:grid;place-items:center;font-size:38px;box-shadow:0 4px 12px rgba(232,65,111,.2);flex-shrink:0}
+  .np-meta{flex:1;min-width:0}
+  .np-name{font-size:19px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .np-singer{font-size:13px;color:var(--pink-deep);font-weight:600;margin-top:3px}
+  .np-ctrl{display:flex;align-items:center;justify-content:center;gap:22px;margin:16px 0 6px}
+  .np-ctrl button{border:none;background:none;cursor:pointer;font-size:26px;color:var(--pink-deep);line-height:1}
+  .np-ctrl .pp{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff;font-size:24px;display:grid;place-items:center;box-shadow:0 6px 16px rgba(232,65,111,.32)}
+  .np-bar{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-soft)}
+  .np-bar input[type=range]{flex:1;accent-color:var(--pink);height:4px}
+  .lyrics{max-height:200px;overflow-y:auto;margin-top:14px;padding:6px 4px;text-align:center;scroll-behavior:smooth}
+  .lyrics p{margin:0;padding:5px 0;font-size:14px;color:var(--text-soft);transition:all .25s;line-height:1.4}
+  .lyrics p.on{color:var(--pink-deep);font-weight:800;font-size:16px;transform:scale(1.04)}
+  .lyrics p.ti{color:var(--text);opacity:.5;font-size:12px}
+  .song-group{font-size:13px;color:var(--text-soft);font-weight:700;margin:14px 4px 8px}
+  .song-row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:10px 14px;margin-bottom:8px;box-shadow:0 3px 10px rgba(255,143,177,.08);cursor:pointer}
+  .song-row:active{transform:scale(.99)}
+  .song-row .sc{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#ffd6e6,#ff9ecd);display:grid;place-items:center;font-size:22px;flex-shrink:0}
+  .song-row .sm{flex:1;min-width:0}
+  .song-row .sn{font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .song-row .ss{font-size:12px;color:var(--pink-deep)}
+  .song-row .sp{font-size:20px;color:var(--pink)}
+  .song-row.playing{outline:2px solid var(--pink)}
+  @media (max-width:820px){
+    body{flex-direction:column;overflow:auto;height:auto;min-height:100vh}
+    .sidebar{
+      position:fixed;bottom:0;left:0;right:0;top:auto;width:auto;
+      flex-direction:row;align-items:center;padding:6px 6px;
+      border-right:none;border-top:2px solid var(--line);
+      background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+      gap:2px;z-index:40;
+    }
+    .brand,.nav-hint{display:none}
+    .nav{flex-direction:row;gap:2px;overflow-x:auto;overflow-y:hidden;flex:1;padding:0}
+    .nav-item{flex:0 0 auto;flex-direction:column;gap:1px;padding:5px 7px;font-size:10px;border-radius:12px}
+    .nav-item:hover{transform:none;background:transparent}
+    .nav-item.active{transform:none}
+    .nav-icon{width:28px;height:28px;font-size:17px;border-radius:9px}
+    .nav-label{font-size:10px;white-space:nowrap}
+    .gear{display:none}
+    .gear-top{display:grid;place-items:center;width:44px;height:44px;border:none;border-radius:14px;background:var(--pink-soft);color:var(--pink-deep);font-size:18px;cursor:pointer;flex-shrink:0}
+    .main{padding-bottom:74px;overflow:visible}
+    .topbar{padding:14px 16px;gap:10px}
+    .clock{font-size:30px}
+    .quote-box{margin:12px 14px 0;padding:12px 16px}
+    .view-wrap{overflow:visible;padding:16px 14px 24px}
+    .cet6{grid-template-columns:1fr}
+    .cards{grid-template-columns:1fr}
+    .add-form{gap:6px}
+    .add-form input,.add-form select{flex:1 1 46%;min-width:0}
+    .add-form button{flex:1 1 100%}
+    .modal{width:92vw;padding:22px}
+    .mod-head h2{font-size:19px}
+    .tabs{overflow-x:auto}
+  }
+  /* 新闻热点列表 */
+  .news-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .news-item{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;background:#fff;border:1.5px solid var(--card-border);border-radius:14px;padding:12px 14px;transition:transform .12s,box-shadow .12s}
+  .news-item:active,.news-item:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(232,65,111,.14)}
+  .news-src{flex-shrink:0;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;color:#fff;white-space:nowrap}
+  .src-cctv{background:#e8415f}
+  .src-people{background:#c8382f}
+  .src-xinhua{background:#d4202a}
+  .src-hot{background:#ff8a3d}
+  .src-weibo{background:linear-gradient(135deg,#ff9a3d,#ff5e8a)}
+  .src-douyin{background:linear-gradient(135deg,#25f4ee,#fe2c55);color:#fff}
+  .src-xhs{background:linear-gradient(135deg,#ff2e4d,#ff6a3d);color:#fff}
+  .src-hot2{background:linear-gradient(135deg,#ff7eb3,#e8416f);color:#fff}
+  .news-title{flex:1;font-size:14.5px;font-weight:600;line-height:1.45;color:var(--text)}
+  .news-go{flex-shrink:0;color:var(--pink-deep);font-size:16px;font-weight:700}
+  .news-copy{flex-shrink:0;border:none;background:#fff0f4;color:#ff5a8a;font-size:14px;font-weight:700;
+    width:26px;height:26px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+  .news-copy:active{transform:scale(.9)}
+  .news-hot{flex-shrink:0;font-size:11px;font-weight:700;color:#ff5a5f;background:#fff0f1;padding:3px 8px;border-radius:20px;white-space:nowrap}
+  .news-foot{margin-top:14px;font-size:12px;color:#b08aa0;text-align:center}
+  .news-loading{text-align:center;color:#b08aa0;padding:18px;font-size:13px}
+  /* 新闻平台筛选：左侧竖排侧栏 + 单列列表 */
+  .news-layout{display:flex;gap:16px;align-items:flex-start;margin-top:6px}
+  .news-side{flex:0 0 104px;display:flex;flex-direction:column;gap:9px;position:sticky;top:6px;max-height:calc(100vh - 48px);overflow-y:auto;padding-right:3px}
+  .news-side::-webkit-scrollbar{width:0}
+  .news-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+  .news-chip{flex:0 0 auto;text-align:center;font-size:13px;font-weight:700;padding:11px 4px;border-radius:13px;border:1.5px solid var(--card-border);background:#fff;color:#a06a86;cursor:pointer;transition:.12s;line-height:1.25;white-space:nowrap;touch-action:none;-webkit-touch-callout:none;user-select:none}
+  .news-chip.active{background:var(--pink-deep);border-color:var(--pink-deep);color:#fff;box-shadow:0 4px 12px rgba(232,65,111,.25)}
+  .news-chip:active{transform:scale(.96)}
+  /* 拖拽排序通用样式 */
+  .nav-item{touch-action:pan-y;-webkit-touch-callout:none}
+  .sort-hidden{visibility:hidden !important}
+  .sort-ghost{position:fixed;z-index:9999;pointer-events:none;margin:0 !important;box-shadow:0 10px 28px rgba(232,65,111,.35);transform:scale(1.04);opacity:.97}
+  /* 随机好玩：小红书一键逛 */
+  .fun-box{background:rgba(255,255,255,.7);border:2px dashed var(--pink);border-radius:var(--radius);padding:14px 16px;margin-top:14px}
+  .fun-head{font-size:15px;font-weight:800;color:var(--pink-deep);margin-bottom:10px}
+  .fun-sub{font-size:11px;color:var(--text-soft);font-weight:600;margin-left:6px}
+  .fun-tags{display:flex;flex-wrap:wrap;gap:8px}
+  .fun-tag{display:inline-block;background:var(--pink-soft);color:var(--pink-deep);font-size:13px;font-weight:700;padding:7px 14px;border-radius:20px;text-decoration:none}
+  .fun-tag:active{transform:scale(.95);background:var(--pink);color:#fff}
+  .fun-shuffle{margin-top:10px;border:2px solid var(--line);background:#fff;color:var(--pink-deep);font-size:13px;font-weight:700;padding:6px 16px;border-radius:20px;cursor:pointer}
+  .fun-shuffle:active{background:var(--pink-soft)}
+</style>
+<meta name="theme-color" content="#ff6fa5">
+<!-- iOS：不声明 apple-mobile-web-app-capable → 主页图标在 Safari 中打开，避开独立 WebApp 底部手势冲突 -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">🌸</div>
+      <h1>我的小天地</h1>
+      <p>每天进步一点点</p>
+    </div>
+    <div class="nav-hint">点右上角 🔃 进入排序</div>
+    <ul class="nav" id="nav"></ul>
+    <button class="gear" id="gearBtn">⚙️ 设置 / 数据</button>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="clock-box">
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="date" id="date">—</div>
+      </div>
+      <div class="checkin-box">
+        <div class="streak" id="streak">已连续打卡 0 天</div>
+        <button class="checkin-btn" id="checkinBtn" data-act="checkin">今日打卡</button>
+      </div>
+      <button class="gear-top" id="gearTop" title="设置 / 数据">⚙️</button>
+    </div>
+    <div class="quote-box">
+      <div class="quote-tag">✨ 今日寄语 · 每天更新</div>
+      <div class="quote-cn" id="quoteCn">—</div>
+      <div class="quote-en" id="quoteEn">—</div>
+    </div>
+    <div class="view-wrap">
+      <div id="view"></div>
+    </div>
+  </main>
+
+  <!-- 设置弹窗 -->
+  <div class="modal-mask" id="modalMask">
+    <div class="modal" id="modal"></div>
+  </div>
+  <!-- 心情相框 · 查看大图 -->
+  <div class="photo-viewer" id="photoViewer">
+    <button class="pv-close" data-act="pvClose" title="关闭">×</button>
+    <img id="pvImg" alt="大图" src="">
+    <div class="pv-cap" id="pvCap"></div>
+    <div class="pv-hint">点击空白处关闭 · 双指可缩放</div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="cal-mask" id="calMask"><div class="cal-pop" id="calPop"></div></div>
+  <audio id="player" preload="none" crossorigin="anonymous"></audio>
+
+<script>
+/* ===================== 工具函数 ===================== */
+const $ = s => document.querySelector(s);
+const KEY = 'cute-workbench-v1';
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+/* 云端同步配置（与新闻后端同一服务） */
+const BACKEND = 'https://cute-news-backend.onrender.com';
+const SYNC_KEY = 'cute-workbench-sync-v1';
+function todayStr(d=new Date()){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function dayOfYear(d=new Date()){
+  const start=new Date(d.getFullYear(),0,0);
+  return Math.floor((d-start)/86400000);
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1800); }
+function compressImage(file, maxW=720, q=0.72){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>{ const im=new Image();
+      im.onload=()=>{ let w=im.width,h=im.height; if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+        const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(im,0,0,w,h);
+        try{ res(cv.toDataURL('image/jpeg',q)); }catch(e){ rej(e); } };
+      im.onerror=rej; im.src=r.result; };
+    r.onerror=rej; r.readAsDataURL(file);
+  });
+}
+function nowTime(){ const d=new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function speak(text,lang){
+  lang=lang||'en-US';
+  if(!('speechSynthesis' in window)){ toast('当前浏览器暂不支持朗读 🔇'); return; }
+  try{
+    window.speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.lang=lang; u.rate=0.92; u.pitch=1.0;
+    window.speechSynthesis.speak(u);
+  }catch(e){ toast('朗读失败，请重试'); }
+}
+
+/* ===================== 数据层 ===================== */
+function defaults(){
+  const order=['english','reading','finance','todo','news','mood','music'];
+  const daily={english:false,reading:false,finance:false,todo:true,news:false,mood:true,music:false};
+  return {
+    navOrder:order.slice(),
+    newsOrder:['央视新闻','新华网','人民网','微博热搜','百度热点','抖音热点','小红书热点','热门'],
+    checkin:{dates:[]},
+    settings:{daily},
+    english:{words:[]},
+    reading:{books:[],logs:[]},
+    finance:{txns:[]},
+    todo:{tasks:[]},
+    news:{items:[]},
+    mood:{entries:[],plogs:[],dailyNotes:{}}
+  };
+}
+function load(){
+  try{ const r=localStorage.getItem(KEY); if(!r) return defaults();
+    const d=JSON.parse(r); const base=defaults();
+    // 浅合并，保证新字段存在
+    for(const k in base){ if(!(k in d)) d[k]=base[k]; }
+    if(!d.settings) d.settings=base.settings;
+    if(!d.settings.daily) d.settings.daily=base.settings.daily;
+    if(!d.updated) d.updated=0;
+    return d;
+  }catch(e){ return defaults(); }
+}
+let DB = load();
+function save(){ DB.updated=Date.now(); try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ toast('存储空间不足啦，删掉一些旧记录再拍～'); } schedulePush(); }
+
+/* ===================== 云端同步 ===================== */
+let _pushTimer=null, _suppressPush=false;
+function schedulePush(){ if(_suppressPush) return; clearTimeout(_pushTimer); _pushTimer=setTimeout(pushSync,1200); }
+function mergeValue(lv, rv){
+  if(rv && typeof rv==='object' && !Array.isArray(rv) && lv && typeof lv==='object' && !Array.isArray(lv)){
+    const out=Object.assign({}, lv);
+    for(const k of Object.keys(rv)){
+      if(k==='updated') continue;
+      out[k]=mergeValue(out[k], rv[k]);
+    }
+    return out;
+  }
+  if(Array.isArray(rv)&&Array.isArray(lv)){
+    const m=new Map();
+    const key=x=>(x&&x.id!==undefined)?String(x.id):JSON.stringify(x);
+    lv.forEach(x=>m.set(key(x),x));
+    rv.forEach(x=>m.set(key(x),x));
+    return [...m.values()];
+  }
+  return rv===undefined?lv:rv;
+}
+function mergeDB(local, remote){
+  const out=mergeValue(local, remote);
+  out.updated=Math.max(Number(local&&local.updated)||0, Number(remote&&remote.updated)||0);
+  return out;
+}
+async function pushSync(){
+  if(!navigator.onLine){ setSync('off'); return; }
+  try{
+    setSync('ing');
+    const body=JSON.stringify({updated:DB.updated||0, data:DB});
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch(BACKEND+'/api/sync?key='+encodeURIComponent(SYNC_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body,signal:ctrl.signal});
+    clearTimeout(t);
+    if(!r.ok) throw 0;
+    setSync('ok');
+  }catch(e){ setSync('off'); }
+}
+async function pullSync(silent){
+  if(!navigator.onLine){ setSync('off'); return false; }
+  try{
+    setSync('ing');
+    const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),8000);
+    const r=await fetch(BACKEND+'/api/sync?key='+encodeURIComponent(SYNC_KEY),{cache:'no-store',signal:ctrl.signal});
+    clearTimeout(t);
+    if(!r.ok) throw 0;
+    const j=await r.json();
+    if(j&&j.data){
+      const remote=j.data; const ru=Number(remote.updated)||0; const lu=Number(DB.updated)||0;
+      if(ru>lu){
+        _suppressPush=true;
+        DB=mergeDB(DB, remote);
+        DB.updated=Math.max(lu,ru);
+        save();
+        _suppressPush=false;
+        initShowAll(); renderSidebar(); renderCheckin(); renderView();
+        setSync('ok');
+        if(!silent) toast('已从云端同步最新数据 ☁️');
+        return true;
+      }
+    }
+    setSync('ok');
+    return false;
+  }catch(e){ setSync('off'); if(!silent) toast('云端暂时连不上，用的本地数据'); return false; }
+}
+function setSync(state){
+  const b=document.getElementById('syncBadge'); if(!b) return;
+  if(state==='ing'){ b.textContent='☁️ 同步中…'; b.style.color='#c98'; b.style.opacity='.9'; }
+  else if(state==='ok'){ b.textContent='☁️ 已同步'; b.style.color='#3a9'; b.style.opacity='.85'; }
+  else { b.textContent='📱 仅本地'; b.style.color='#b88'; b.style.opacity='.7'; }
+}
+function injectSyncBadge(){
+  if(document.getElementById('syncBadge')) return;
+  const b=document.createElement('div'); b.id='syncBadge';
+  b.style.cssText='position:fixed;right:10px;bottom:10px;z-index:9999;font-size:12px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.92);color:#b88;box-shadow:0 2px 10px rgba(0,0,0,.15);cursor:pointer;user-select:none;backdrop-filter:blur(4px);font-family:inherit;';
+  b.title='云端同步 · 点击立即同步';
+  b.onclick=()=>pullSync(false).then(()=>pushSync());
+  document.body.appendChild(b);
+  setSync('off');
+}
+
+/* ===================== 模块元信息 ===================== */
+const MODULES = {
+  english:{name:'英语学习',icon:'🔤',daily:false,render:renderEnglish},
+  reading:{name:'每日阅读',icon:'📖',daily:false,render:renderReading},
+  finance:{name:'收支记账',icon:'💰',daily:false,render:renderFinance},
+  todo:{name:'待办计划',icon:'✅',daily:true,render:renderTodo},
+  news:{name:'新闻热点',icon:'📰',daily:false,render:renderNews},
+  mood:{name:'心情相框',icon:'🖼️',daily:true,render:renderMood},
+  music:{name:'音乐',icon:'🎵',daily:false,render:renderMusic},
+};
+let active = 'english';
+const ui = { showAll:{}, plogTargetId:null, viewDate:todayStr(), selMode:false, selIds:[], calY:null, calM:null, eng:{phase:'idle'}, readFilter:'all', readQuiz:{}, curRead:null, readOnline:false, lastOnlineTitle:null };
+
+function initShowAll(){
+  const ids=Object.keys(MODULES);
+  let migrated=false;
+  DB.navOrder=DB.navOrder.filter(id=>ids.includes(id));
+  for(const id of ids){
+    if(!DB.navOrder.includes(id)){ DB.navOrder.push(id); migrated=true; }
+    if(!(id in DB.settings.daily)){ DB.settings.daily[id]=false; migrated=true; }
+  }
+  if(migrated) save();
+  for(const id in MODULES){ if(!(id in ui.showAll)) ui.showAll[id]=!DB.settings.daily[id]; }
+}
+function filt(list){ return ui.showAll[active] ? list : list.filter(x=>x.date===todayStr()); }
+function filterBar(id){
+  const s=ui.showAll[id];
+  return `<div class="tabs">
+    <button data-act="toggleShow" data-id="${id}" class="${s?'on':''}">${s?'只看今日':'显示全部'}</button>
+    <button data-act="clearToday" data-id="${id}" class="clear">🧹 清空今日</button>
+  </div>`;
+}
+
+/* ===================== 顶部：时钟 / 打卡 / 寄语 ===================== */
+const QUOTES=[
+  {cn:'你今天也要闪闪发光呀！',en:'You are going to shine brightly today!'},
+  {cn:'慢慢来，比较快。',en:'Slow is smooth, and smooth is fast.'},
+  {cn:'你比昨天的自己更棒了。',en:'You are better than yesterday’s you.'},
+  {cn:'小小努力，也能带来大大惊喜。',en:'Tiny efforts can bring big surprises.'},
+  {cn:'今天也要好好爱自己哦。',en:'Remember to love yourself well today.'},
+  {cn:'一步一步，走向想去的地方。',en:'Step by step toward where you want to be.'},
+  {cn:'已经很努力啦，休息一下也没关系。',en:"You've worked hard; it's okay to rest."},
+  {cn:'把今天过成自己喜欢的样子。',en:'Make today the kind of day you like.'},
+  {cn:'你不需要很厉害才能开始。',en:"You don't have to be great to start."},
+  {cn:'每一个今天，都是新的礼物。',en:'Every today is a brand-new gift.'},
+  {cn:'保持热爱，奔赴山海。',en:'Keep your passion and head for the mountains and seas.'},
+  {cn:'微笑着，把困难一个个打败。',en:'Smile, and beat the difficulties one by one.'},
+  {cn:'你种下的每一份努力都会开花。',en:'Every effort you plant will one day bloom.'},
+  {cn:'今天也要元气满满！',en:'Be full of energy today too!'},
+  {cn:'做好小事，也能成就大事。',en:'Do the small things well, and they become great.'},
+  {cn:'世界很吵，听听自己就好。',en:'The world is loud; just listen to yourself.'}
+];
+const CET6=[
+  {w:'ambiguous',ph:'/æmˈbɪɡjuəs/',pos:'adj.',cn:'模棱两可的，含糊不清的',ex:'His ambiguous answer confused everyone.',exCn:'他模棱两可的回答让大家都糊涂了。'},
+  {w:'articulate',ph:'/ɑːrˈtɪkjuleɪt/',pos:'adj./v.',cn:'表达清晰的；清晰表达',ex:'She is an articulate public speaker.',exCn:'她是一位表达清晰的演讲者。'},
+  {w:'alleviate',ph:'/əˈliːvieɪt/',pos:'v.',cn:'减轻，缓解',ex:'The medicine alleviated his pain.',exCn:'药物缓解了他的疼痛。'},
+  {w:'bolster',ph:'/ˈboʊlstər/',pos:'v.',cn:'支持，加强',ex:'The data bolsters our argument.',exCn:'这些数据支持了我们的论点。'},
+  {w:'candid',ph:'/ˈkændɪd/',pos:'adj.',cn:'坦率的，直率的',ex:'To be candid, I disagree with you.',exCn:'坦率地说，我不同意你的看法。'},
+  {w:'corroborate',ph:'/kəˈrɒbəreɪt/',pos:'v.',cn:'证实，支持',ex:'Witnesses corroborated his story.',exCn:'证人证实了他的说法。'},
+  {w:'diligent',ph:'/ˈdɪlɪdʒənt/',pos:'adj.',cn:'勤奋的，用功的',ex:'She is diligent in her studies.',exCn:'她学习很勤奋。'},
+  {w:'elucidate',ph:'/iˈluːsɪdeɪt/',pos:'v.',cn:'阐明，解释清楚',ex:'He elucidated the complex theory.',exCn:'他阐明了那个复杂的理论。'},
+  {w:'formidable',ph:'/ˈfɔːrmɪdəbl/',pos:'adj.',cn:'令人敬畏的；强大的',ex:'They face a formidable opponent.',exCn:'他们面对一个强大的对手。'},
+  {w:'gregarious',ph:'/ɡrɪˈɡeriəs/',pos:'adj.',cn:'合群的；爱交际的',ex:'He has a gregarious personality.',exCn:'他性格开朗合群。'},
+  {w:'hamper',ph:'/ˈhæmpər/',pos:'v.',cn:'妨碍，阻碍',ex:'The storm hampered the rescue.',exCn:'暴风雨妨碍了救援。'},
+  {w:'inherent',ph:'/ɪnˈhɪrənt/',pos:'adj.',cn:'固有的，内在的',ex:'There is a risk inherent in the plan.',exCn:'这个计划存在固有风险。'},
+  {w:'jeopardize',ph:'/ˈdʒepərdaɪz/',pos:'v.',cn:'危及，损害',ex:'His actions jeopardized the project.',exCn:'他的行为危及了项目。'},
+  {w:'knack',ph:'/næk/',pos:'n.',cn:'诀窍，天赋',ex:'She has a knack for languages.',exCn:'她在语言方面很有天赋。'},
+  {w:'lucrative',ph:'/ˈluːkrətɪv/',pos:'adj.',cn:'赚钱的，利润丰厚的',ex:'It is a lucrative business.',exCn:'这是一门利润丰厚的生意。'},
+  {w:'meticulous',ph:'/məˈtɪkjələs/',pos:'adj.',cn:'一丝不苟的，极仔细的',ex:'He is meticulous about details.',exCn:'他对细节一丝不苟。'},
+  {w:'nefarious',ph:'/nɪˈferiəs/',pos:'adj.',cn:'恶毒的，邪恶的',ex:'The nefarious plot was uncovered.',exCn:'那个恶毒的阴谋被揭穿了。'},
+  {w:'oblivious',ph:'/əˈblɪviəs/',pos:'adj.',cn:'未察觉的，不在意的',ex:'He was oblivious to the danger.',exCn:'他没有察觉到危险。'},
+  {w:'precarious',ph:'/prɪˈkeriəs/',pos:'adj.',cn:'不稳定的，危险的',ex:'Their financial situation is precarious.',exCn:'他们的财务状况不稳定。'},
+  {w:'quiescent',ph:'/kwiˈesnt/',pos:'adj.',cn:'静止的；沉寂的',ex:'The volcano is currently quiescent.',exCn:'这座火山目前处于沉寂状态。'},
+  {w:'rudimentary',ph:'/ˌruːdɪˈmentri/',pos:'adj.',cn:'基本的，初步的',ex:'He has only rudimentary skills.',exCn:'他只有最基本的技能。'},
+  {w:'scrutinize',ph:'/ˈskruːtənaɪz/',pos:'v.',cn:'仔细检查，细看',ex:'She scrutinized the contract.',exCn:'她仔细审查了合同。'},
+  {w:'tentative',ph:'/ˈtentətɪv/',pos:'adj.',cn:'试探性的，初步的',ex:'We reached a tentative agreement.',exCn:'我们达成了一项初步协议。'},
+  {w:'ubiquitous',ph:'/juːˈbɪkwɪtəs/',pos:'adj.',cn:'无处不在的',ex:'Smartphones are ubiquitous.',exCn:'智能手机无处不在。'},
+  {w:'viable',ph:'/ˈvaɪəbl/',pos:'adj.',cn:'可行的，能存活的',ex:'It is a viable solution.',exCn:'这是一个可行的方案。'},
+  {w:'whimsical',ph:'/ˈwɪmzɪkl/',pos:'adj.',cn:'异想天开的，古怪的',ex:'The design is whimsical and fun.',exCn:'这个设计充满奇思妙想。'},
+  {w:'affluent',ph:'/ˈæfluənt/',pos:'adj.',cn:'富裕的，丰富的',ex:'They live in an affluent area.',exCn:'他们住在富裕的地区。'},
+  {w:'brevity',ph:'/ˈbrevəti/',pos:'n.',cn:'简洁，简短',ex:'The brevity of his speech was striking.',exCn:'他演讲的简洁令人印象深刻。'},
+  {w:'comprise',ph:'/kəmˈpraɪz/',pos:'v.',cn:'包含；由…组成',ex:'The committee comprises ten members.',exCn:'委员会由十人组成。'},
+  {w:'concede',ph:'/kənˈsiːd/',pos:'v.',cn:'承认；让步',ex:'He conceded that he was wrong.',exCn:'他承认自己错了。'},
+  {w:'discern',ph:'/dɪˈsɜːrn/',pos:'v.',cn:'辨别，看清楚',ex:'It is hard to discern the truth.',exCn:'很难辨别真相。'},
+  {w:'empirical',ph:'/ɪmˈpɪrɪkl/',pos:'adj.',cn:'经验主义的，实证的',ex:'We need empirical evidence.',exCn:'我们需要实证证据。'},
+  {w:'fluctuate',ph:'/ˈflʌktʃueɪt/',pos:'v.',cn:'波动，起伏',ex:'Prices fluctuate on a daily basis.',exCn:'价格每天波动。'},
+  {w:'mitigate',ph:'/ˈmɪtɪɡeɪt/',pos:'v.',cn:'减轻，缓和',ex:'Steps were taken to mitigate risk.',exCn:'已采取措施减轻风险。'},
+  {w:'salient',ph:'/ˈseɪliənt/',pos:'adj.',cn:'显著的，重要的',ex:'The salient point is quite clear.',exCn:'关键的一点很清楚。'},
+  {w:'undermine',ph:'/ˌʌndərˈmaɪn/',pos:'v.',cn:'削弱，损害',ex:'His words undermined her confidence.',exCn:'他的话削弱了她的信心。'},
+  {w:'verbose',ph:'/vərˈboʊs/',pos:'adj.',cn:'冗长的，啰嗦的',ex:'The report was needlessly verbose.',exCn:'这份报告啰嗦得毫无必要。'},
+  {w:'warrant',ph:'/ˈwɔːrənt/',pos:'v./n.',cn:'保证；使有必要',ex:'The situation warrants caution.',exCn:'这种情况需要谨慎。'},
+  {w:'abundance',ph:'/əˈbʌndəns/',pos:'n.',cn:'丰富，充裕',ex:'The region has an abundance of natural resources.',exCn:'该地区自然资源丰富。'},
+  {w:'adjacent',ph:'/əˈdʒeɪsnt/',pos:'adj.',cn:'邻近的，相邻的',ex:'The two buildings are adjacent to each other.',exCn:'这两栋楼彼此相邻。'},
+  {w:'bizarre',ph:'/bɪˈzɑːr/',pos:'adj.',cn:'古怪的，怪诞的',ex:'He had a bizarre dream last night.',exCn:'他昨晚做了个古怪的梦。'},
+  {w:'coherent',ph:'/koʊˈhɪrənt/',pos:'adj.',cn:'连贯的，有条理的',ex:'She gave a clear and coherent explanation.',exCn:'她给出清晰连贯的解释。'},
+  {w:'constitute',ph:'/ˈkɑːnstɪtuːt/',pos:'v.',cn:'构成，组成',ex:'Twelve months constitute a year.',exCn:'十二个月构成一年。'},
+  {w:'deduce',ph:'/dɪˈduːs/',pos:'v.',cn:'推断，演绎',ex:'We can deduce the answer from the clues.',exCn:'我们能从线索推断出答案。'},
+  {w:'elevate',ph:'/ˈelɪveɪt/',pos:'v.',cn:'提升，抬高',ex:'The new job elevated her status.',exCn:'新工作提升了她的地位。'},
+  {w:'fragile',ph:'/ˈfrædʒaɪl/',pos:'adj.',cn:'脆弱的，易碎的',ex:'Handle the vase with care; it is fragile.',exCn:'小心拿花瓶，它易碎。'},
+  {w:'hypothesis',ph:'/haɪˈpɑːθəsɪs/',pos:'n.',cn:'假设，假说',ex:'The experiment tested our hypothesis.',exCn:'实验检验了我们的假设。'},
+  {w:'incentive',ph:'/ɪnˈsentɪv/',pos:'n.',cn:'动机，刺激',ex:'Tax cuts provide an incentive to invest.',exCn:'减税提供了投资动机。'},
+  {w:'integrity',ph:'/ɪnˈteɡrəti/',pos:'n.',cn:'诚实；完整',ex:'He is a man of great integrity.',exCn:'他是个极诚实的人。'},
+  {w:'legitimate',ph:'/lɪˈdʒɪtɪmət/',pos:'adj.',cn:'合法的，合理的',ex:'She has a legitimate reason to be angry.',exCn:'她有合理的理由生气。'},
+  {w:'manifest',ph:'/ˈmænɪfest/',pos:'v./adj.',cn:'显示；明显的',ex:'His anxiety began to manifest in insomnia.',exCn:'他的焦虑开始表现为失眠。'},
+  {w:'naive',ph:'/naɪˈiːv/',pos:'adj.',cn:'天真的，幼稚的',ex:'It would be naive to trust everyone.',exCn:'轻信每个人是天真的。'},
+  {w:'orthodox',ph:'/ˈɔːrθədɑːks/',pos:'adj.',cn:'正统的，传统的',ex:'He challenged orthodox views.',exCn:'他挑战了正统观点。'},
+  {w:'paradox',ph:'/ˈpærədɑːks/',pos:'n.',cn:'悖论，矛盾',ex:'It is a paradox that we sleep to feel awake.',exCn:'睡觉为了清醒是个悖论。'},
+  {w:'quantify',ph:'/ˈkwɑːntɪfaɪ/',pos:'v.',cn:'量化',ex:'It is hard to quantify happiness.',exCn:'幸福很难量化。'},
+  {w:'retrieve',ph:'/rɪˈtriːv/',pos:'v.',cn:'取回，检索',ex:'I retrieved the file from the archive.',exCn:'我从档案中取回了文件。'},
+  {w:'simultaneous',ph:'/ˌsaɪmlˈteɪniəs/',pos:'adj.',cn:'同时的，同步的',ex:'The two events were simultaneous.',exCn:'这两件事是同时发生的。'},
+  {w:'transient',ph:'/ˈtrænʃnt/',pos:'adj.',cn:'短暂的，转瞬即逝的',ex:'Fame can be transient.',exCn:'名声可能转瞬即逝。'},
+  {w:'unanimous',ph:'/juˈnænɪməs/',pos:'adj.',cn:'一致的',ex:'The committee was unanimous in its decision.',exCn:'委员会一致通过决定。'},
+  {w:'versatile',ph:'/ˈvɜːrsətl/',pos:'adj.',cn:'多才多艺的，多用途的',ex:'She is a versatile actress.',exCn:'她是个多才多艺的演员。'},
+  {w:'accentuate',ph:'/əkˈsentʃueɪt/',pos:'v.',cn:'强调，突出',ex:'The dress accentuates her figure.',exCn:'这条裙子突出了她的身材。'},
+  {w:'deliberate',ph:'/dɪˈlɪbərət/',pos:'adj./v.',cn:'故意的；深思熟虑',ex:'It was a deliberate mistake.',exCn:'那是个故意的错误。'},
+  {w:'explicit',ph:'/ɪkˈsplɪsɪt/',pos:'adj.',cn:'明确的，清楚的',ex:'He gave explicit instructions.',exCn:'他给出了明确指示。'},
+  {w:'impartial',ph:'/ɪmˈpɑːrʃl/',pos:'adj.',cn:'公正的，无偏见的',ex:'A judge must be impartial.',exCn:'法官必须公正。'},
+  {w:'plausible',ph:'/ˈplɔːzəbl/',pos:'adj.',cn:'似乎合理的',ex:'He offered a plausible excuse.',exCn:'他给了一个似乎合理的借口。'},
+  {w:'redundant',ph:'/rɪˈdʌndənt/',pos:'adj.',cn:'多余的，冗余的',ex:'The redundant words were cut.',exCn:'多余的词被删掉了。'},
+  {w:'subtle',ph:'/ˈsʌtl/',pos:'adj.',cn:'微妙的，细微的',ex:'There is a subtle difference.',exCn:'有个微妙的区别。'},
+  {w:'tedious',ph:'/ˈtiːdiəs/',pos:'adj.',cn:'冗长乏味的',ex:'The lecture was tedious.',exCn:'那场讲座冗长乏味。'},
+  {w:'threshold',ph:'/ˈθreʃhoʊld/',pos:'n.',cn:'门槛，临界点',ex:'We are at the threshold of a new era.',exCn:'我们处于新时代的临界点。'},
+  {w:'reconcile',ph:'/ˈrekənsaɪl/',pos:'v.',cn:'调和，使和解',ex:'They reconciled their differences.',exCn:'他们调和了分歧。'}
+];
+/* 用 CET6 词典给"在线英文"自动挑出正文里出现过的难词，出题复习 */
+const CET6_MAP={}; CET6.forEach(x=>{ if(x.w) CET6_MAP[x.w.toLowerCase()]=x.cn; });
+/* 每日阅读：内置精选（离线可读，每天轮换一篇，较长的双语短文） */
+const READINGS=[
+  {title:'微小习惯的安静力量', author:'佚名', en:'We often overestimate what we can finish in one day, yet underestimate what we can build over a year. Real change rarely arrives in a single dramatic moment. Instead, it is shaped quietly by small, repeated actions. Reading ten pages each night, or walking for twenty minutes every morning, is not merely passing time—it is training the person you are becoming. The mind loves comfort, but growth lives at the edge of discomfort. Be patient, and trust the process. A year from now, you will thank the version of yourself that refused to quit on ordinary days.', zh:'我们常高估一天能完成的事，却低估一年能建成的改变。真正的转变很少来自某个戏剧性的瞬间，而是由微小、重复的行动悄悄塑造。每晚读十页书，或每天清晨走二十分钟，不只是消磨时间——而是在训练那个正在成为的自己。心智偏爱安逸，而成长生在不适的边缘。保持耐心，相信过程。一年后，你会感谢那个在平凡日子里没有放弃的自己。', note:'overestimate 高估；underestimate 低估；dramatic 戏剧性的；merely 仅仅；edge 边缘。'},
+  {title:'阅读：一种安静的反叛', author:'佚名', en:'In a world that rewards speed, choosing to read slowly is almost a rebellion. A book does not hurry you. It waits, sentence after sentence, until your thoughts catch up with the author’s. Through reading, you borrow other lives and other centuries, learning how people far away once loved, feared, and hoped. This is why a well-read mind rarely feels alone. The page becomes a window, and every window opens onto a wider world than the one you stand in.', zh:'在一个奖赏速度的世界里，选择慢读几乎是一种反叛。书不会催促你。它等着，一句接一句，直到你的思绪追上作者的脚步。通过阅读，你借来别人的人生与别的世纪，了解远方的人曾如何爱、恐惧与期盼。正因如此，饱读之人很少感到孤独。书页成了窗，而每扇窗都通向比你脚下方更广阔的世界。', note:'rebellion 反叛；reward 奖赏；borrow 借；century 世纪；window 窗口（喻视角）。'},
+  {title:'保持平静的艺术', author:'佚名', en:'Calm is not the absence of storms; it is the ability to remain steady while the storm passes. When pressure mounts, most people react before they think. The trained mind, however, pauses. It observes the feeling, names it, and then chooses a response instead of a reflex. This small gap between stimulus and reaction is where wisdom lives. You cannot control what happens to you, but you can always decide what happens next. That decision, repeated daily, is the foundation of a peaceful life.', zh:'平静不是没有风暴，而是在风暴掠过时仍能保持稳定的能力。当压力攀升，多数人未经思考便做出反应。而训练有素的心智会先停顿：它观察情绪、为它命名，然后选择回应而非本能。刺激与反应之间这道微小的间隙，正是智慧栖身之处。你无法控制发生在自己身上的事，却总能决定下一步怎么走。这个决定日复一日，便是平和人生的基础。', note:'absence 缺乏；mount 攀升；reflex 本能反应；stimulus 刺激；foundation 基础。'},
+  {title:'失败是一位老师', author:'佚名', en:'Nobody plans to fail, yet failure visits everyone who tries anything worthwhile. The difference lies not in avoiding falls, but in what we do afterward. A setback can shrink us into fear, or stretch us into growth—the same event, two destinies. Treat failure as data, not as identity. Ask what it revealed, adjust the approach, and begin again with clearer eyes. History is full of people who were called failures right before they succeeded. Persistence, not perfection, is the real qualification for achievement.', zh:'没人计划失败，但每个尝试有价值之事的人都会被失败造访。差别不在免于跌倒，而在跌倒之后怎么做。挫折既可能把我们缩进恐惧，也可能将我们拉伸向成长——同一件事，两种命运。把失败当作数据，而非标签。问它揭示了什么，调整方法，再带着更清醒的眼睛重新开始。历史满是那些在成功前被称失败的人。坚持，而非完美，才是成就真正的资格。', note:'worthwhile 值得的；setback 挫折；destiny 命运；reveal 揭示；persistence 坚持。'},
+  {title:'无聊的礼物', author:'佚名', en:'We fill every quiet moment with screens, afraid of the slightest boredom. Yet boredom is not the enemy of creativity—it is often its doorway. When the mind is not fed constant entertainment, it begins to wander, and wandering thoughts are where original ideas are born. Some of the best solutions arrive while you are doing nothing in particular: washing dishes, walking, or staring out of a train window. Protect a little emptiness in your day. Let your brain get quietly bored, and watch what it makes.', zh:'我们用屏幕填满每个安静的瞬间，生怕哪怕一丝无聊。然而无聊并非创造力的敌人——它常是创造力的门。当心智不再被源源不断的娱乐投喂，它便开始游荡，而游荡的思绪正是原创想法的诞生地。一些最好的解法，出现在你无所事事的时刻：洗碗、散步，或望着车窗外发呆。在一天里护住一点空白，让大脑安静地无聊一会儿，看看它会造出什么。', note:'entertainment 娱乐；wander 游荡；original 原创的；in particular 特别地；emptiness 空白。'},
+  {title:'慢慢学一门语言', author:'佚名', en:'Learning a language is less like a sprint and more like tending a garden. You plant words, water them with repetition, and wait through seasons of seeming no progress at all. Then, almost without warning, sentences that once felt impossible start to flow. The mistake is to judge a garden by a single afternoon. Trust the slow buildup. Read a little each day, listen a little each day, and speak without fear of errors. Fluency is not a moment you arrive at; it is a habit you keep.', zh:'学一门语言，不太像短跑，更像是打理一座花园。你种下单词，用重复浇水，熬过看似毫无进展的季节。然后，几乎毫无征兆地，那些曾觉不可能的句子开始自然流淌。错误在于用某一个下午来评判一座花园。相信缓慢的积累：每天读一点，每天听一点，带着不怕犯错的心去说。流利不是你抵达的某个时刻，而是你保持的一种习惯。', note:'sprint 短跑；tend 照料；repetition 重复；fluency 流利；arrive at 抵达。'},
+  {title:'好奇心胜过天赋', author:'佚名', en:'Talent opens the first door, but curiosity keeps it open. Many gifted people stall because they stop asking questions, while curious ones keep moving long after the early advantage fades. Curiosity turns ordinary moments into lessons: a broken gadget becomes a puzzle, a foreign phrase becomes an invitation. It costs nothing and travels everywhere. If you want to keep growing, protect your questions as carefully as your answers. The person who asks “why” and “what if” will almost always outlearn the person who merely knows.', zh:'天赋打开第一扇门，而好奇心让门敞着。许多有天赋的人停滞，是因为他们不再提问；而好奇的人，在早年的优势褪去后仍继续前行。好奇心把寻常时刻变成课堂：坏掉的小装置成了谜题，一句外语成了邀请。它不花分文，却能去往任何地方。若想持续成长，请像守护答案一样守护你的问题。那个问"为什么""万一呢"的人，几乎总能胜过只是"知道"的人。', note:'stall 停滞；fade 褪去；gadget 小装置；invitation 邀请；outlearn 学到更多。'},
+  {title:'“足够”的财富', author:'佚名', en:'Modern life whispers that more is always better—more money, more speed, more things. But the pursuit of “more” has no natural stopping point, and many who arrive there still feel hollow. The quieter skill is learning the line between need and want. When you know what is enough, you stop running and start living. Wealth, in the end, is not a number in a bank; it is the distance between what you have and what you require. Narrow that gap, and you may find you were rich all along.', zh:'现代生活低语着：更多总更好——更多钱、更快、更多物。但"更多"的追求没有天然的终点，许多抵达那里的人仍觉空虚。更安静的本领，是学会区分需要与想要。当你知道"足够"在哪里，便不再奔跑，开始生活。财富归根结底不是银行里的一个数字，而是你拥有与所需之间的距离。收窄这段距离，你或许会发现，一直以来你都很富有。', note:'pursuit 追求；hollow 空虚的；require 需要；narrow 收窄；all along 一直。'},
+  {title:'休息也是生产力', author:'佚名', en:'We praise nonstop work and treat rest as a reward earned only after exhaustion. Yet the brain consolidates memory and sparks insight precisely when we step away from the task. A walk, a nap, or a quiet evening is not lost time—it is part of the work. The best thinkers protect their downtime as fiercely as their deadlines. If you feel stuck, do not push harder; step back. Often the solution appears not while you chase it, but while you have finally allowed yourself to stop.', zh:'我们赞美不停歇的工作，把休息当作耗尽后才配得的奖赏。然而大脑恰恰在我们离开任务时巩固记忆、迸发洞见。一次散步、一场小憩、一个安静的夜晚，并非被浪费的时间——它们是工作的一部分。最优秀的思考者守护放空时光如同守护截止日期。若你卡住了，别更用力地推；退后一步。答案常常不在你追逐它时出现，而在你终于允许自己停下的时刻降临。', note:'consolidate 巩固；insight 洞见；precisely 恰恰；downtime 休息时间；stuck 卡住。'},
+  {title:'你身边的圈子', author:'佚名', en:'You become like the people you spend your time with, often without noticing. Optimistic friends normalize hope; anxious ones normalize worry. This is not about judging others, but about choosing your everyday atmosphere with care. Seek companions who ask how you are and mean it, who celebrate your small wins, and who tell you the truth kindly. A few such people are worth more than a thousand acquaintances. Surround yourself with growth, and growth begins to feel like the default setting of your life.', zh:'你会在不经意间，变得像那些朝夕相处的人。乐观的朋友让希望成为常态，焦虑的朋友让担忧成为常态。这不是要评判他人，而是提醒你谨慎选择日常的氛围。去寻找那些会真心问你"还好吗"、为你的小成就喝彩、且善意说出真相的同伴。这样几个人，胜过一千个泛泛之交。让成长环绕自己，成长便开始像你人生的默认设置。', note:'normalize 使…成为常态；companion 同伴；acquaintance 泛泛之交；surround 环绕；default 默认。'},
+  {title:'时间才是真正的货币', author:'佚名', en:'Money can be earned again, but the hour you spent cannot be withdrawn from any bank. We guard our wallets carefully and hand our hours to distractions almost for free. Yet time is the one resource that spends itself whether we choose or not. The question is not how much time you have, but what you trade it for. A life feels rich not when every minute is filled, but when the minutes are filled with what matters. Spend your attention like the scarce treasure it is.', zh:'钱可以再赚，但你花掉的那个小时，却无法从任何银行取回。我们小心守护钱包，却几乎免费地把时间交给分心之物。然而时间是一种不论你选或不选都会自行流逝的资源。问题不在于你有多少时间，而在于你拿它换了什么。人生之富足，不在于每分钟都被填满，而在于那些分钟装进了要紧的事。像对待稀缺的珍宝那样，花掉你的注意力。', note:'withdraw 取回；distraction 分心；scarce 稀缺的；treasure 珍宝；trade for 交换。'},
+  {title:'温柔地表达', author:'佚名', en:'Honesty and kindness are often framed as opposites, as if telling the truth must hurt. But the sharper skill is to speak clearly and warmly at once. You can say “this worries me” without saying “you are wrong.” You can set a boundary without building a wall. People remember not only what you said, but how safe they felt hearing it. Practice the sentence that is true and tender together. Over time, your words become a place others trust—and trust, once earned, is its own quiet power.', zh:'诚实与善意常被框为对立面，仿佛说真话就必须伤人。但更利落的本领，是同时清晰又温暖地表达。你可以说"这让我担心"，而不必说"你错了"；可以划出边界，而不必筑起高墙。人们记住的不仅是你说了什么，还有听你说话时感到的安稳。练习把真实与温柔写进同一句话。久而久之，你的言语成了一个别人信任的地方——而信任一旦赢得，便是它自身安静的力量。', note:'frame 框定；boundary 边界；tender 温柔的；earn 赢得；opposite 对立面。'},
+  {title:'打一场持久战', author:'佚名', en:'Anything meaningful takes longer than expected, and that is not a bug but the design. Skills deepen with reps, relationships with shared winters, and character with quiet tests no one sees. Those who quit early mistake the normal slowness for failure. Play the long game: show up today not because today will be dramatic, but because today is one more brick. You will not feel the cathedral while laying the third stone. Keep laying. The shape arrives later, almost as a surprise, to those who simply refused to stop.', zh:'任何有意义的事都比预期更久，这不是 bug，而是设定。技能在重复中加深，关系在共渡的寒冬里结实，品格在无人看见的安静考验中成形。早早放弃的人，把正常的缓慢误认成失败。玩长线游戏吧：今天出现，不是因为今天会有戏剧性，而是因为今天是又一块砖。砌第三块石时，你不会感到那座大教堂。继续砌。轮廓会在后来几乎以惊喜的姿态降临——降临于那些只是拒绝停下的人。', note:'rep 重复；character 品格；cathedral 大教堂；mistake 误认；refuse 拒绝。'},
+  {title:'倾听是一份礼物', author:'佚名', en:'Most people listen with the intent to reply, not to understand. We rehearse our answer while the other person is still speaking, and so we miss the actual message. True listening is rare and therefore precious. It says, without words, “you matter.” Put down the phone, meet the eyes, and let the silence between sentences exist. When you listen fully, people tell you more—not only facts, but feelings. In a noisy world, the ability to truly hear another person is a quiet superpower worth cultivating.', zh:'多数人倾听，是为了回应，而非为了理解。对方还在说话，我们已在排练答案，于是错过了真正的信息。真正的倾听稀少，因而珍贵。它无需言语便说："你重要。"放下手机，目光相接，让句子之间的沉默存在。当你全然倾听，人们会告诉你更多——不只是事实，还有感受。在喧嚣的世界里，真正听见另一个人的能力，是值得培养的安静超能力。', note:'intent 意图；rehearse 排练；precious 珍贵的；cultivate 培养；noisy 喧嚣的。'},
+  {title:'在准备好之前就开始', author:'佚名', en:'Waiting to feel ready is one of the most effective ways to never begin. Readiness is not a prerequisite that arrives; it is a feeling that follows action. The first page is always the hardest, and the first sentence always the clumsiest. Do not wait for confidence to lead—let movement create it. Start the project, the habit, the conversation, even imperfectly. Courage is not the absence of fear but the decision to begin while fear is still in the room. The door opens after you step, not before.', zh:'等待"感到准备好"，是最有效的永不开始之法。准备好不是先来到的前提，而是行动之后才有的感受。第一页总是最难，第一句总是最笨拙。别等信心带路——让行动创造它。开始那个项目、那个习惯、那场对话，哪怕不完美。勇气不是没有恐惧，而是恐惧仍在屋里时仍决定开始。门在你迈步之后才开，而非之前。', note:'prerequisite 前提；clumsy 笨拙的；confidence 信心；conversation 对话；in the room 在场。'},
+  {title:'一个小小的日常仪式', author:'佚名', en:'Happiness is rarely a grand event; more often it is a series of small rituals we repeat on purpose. A morning cup of tea, a short walk after lunch, a line written before sleep. These tiny anchors steady a day that would otherwise slip past unnamed. You do not need a vacation to feel alive; you need a few moments you can count on. Design one small ritual this week and protect it. The life you want is not somewhere far away—it is built, gently, from the ordinary hours you choose to mark as yours.', zh:'幸福很少是盛大事件，更多时候是我们刻意重复的一系列小仪式：清晨的一杯茶，午后的一次短步，睡前写下的那一行。这些小小的锚，稳住了本会无名溜走的一天。你不需要一场假期才觉活着，你需要几个可以指望的瞬间。本周设计一个小仪式并守护它。你想要的生活不在远方——它温柔地，由那些你选择标记为"属于自己"的寻常时光筑成。', note:'ritual 仪式；anchor 锚；steady 稳住；on purpose 刻意；slip past 溜走。'},
+  {title:'数字极简主义', author:'佚名', en:'Our phones buzz with notifications we never asked for. Apps compete for our attention as if it were a resource to be mined. Digital minimalism is the practice of questioning which tools truly serve your values, and quietly removing the rest. It is not about rejecting technology, but about using it with intention. Start by deleting the apps you open out of habit rather than need. Turn off all but the most essential alerts. You may fear missing out, yet most people report the opposite: a calmer mind and deeper focus. The goal is not a blank screen, but a screen that earns its place in your life.', zh:'我们的手机被从未主动要求的通知震动个不停。各类应用争相抢夺注意力，仿佛那是待开采的资源。数字极简主义，就是去追问哪些工具真正服务于你的价值，再悄悄移除其余。它不是拒绝科技，而是有意为之地使用它。从删掉那些因习惯而非需求才打开的应用开始，关掉除最必要之外的所有提醒。你或许担心错失，然而多数人反馈的恰恰相反：更平静的心绪与更深的专注。目标不是一片空白的屏幕，而是一块在你生活中"配得上其位置"的屏幕。', note:'notification 通知；minimalism 极简主义；intention 意图；essential 必要的；earn 赢得。'},
+  {title:'脆弱是一种力量', author:'佚名', en:'We are taught to hide weakness and appear composed. Yet research suggests that admitting uncertainty can strengthen trust, not weaken it. When a leader says "I do not have all the answers," teams often feel safer to speak up. Vulnerability is not the same as helplessness; it is the courage to be seen as you are. Of course, context matters—oversharing with strangers may backfire. But with people you trust, letting your guard down can deepen connection. The strongest relationships are rarely built on perfection, but on the honesty of two imperfect people.', zh:'我们被教导要藏起软弱、显得从容。然而研究表明，承认不确定反而能增强信任，而非削弱它。当一位领导者说"我并非全知"，团队往往更敢开口。脆弱不同于无助，它是"被如实地看见"的勇气。当然，分寸很重要——对陌生人过度袒露可能适得其反。但在你信任的人面前，放下防备能加深联结。最牢固的关系很少建立在完美之上，而建立在两个不完美之人的坦诚之中。', note:'composed 从容的；uncertainty 不确定；vulnerability 脆弱；backfire 适得其反；imperfect 不完美的。'},
+  {title:'如何写出清晰的文章', author:'佚名', en:'Good writing is not about fancy words; it is about clear thinking. Before you type, decide the single point you want the reader to remember. Then say it plainly, in the shortest honest sentence you can. Avoid piling clauses that force the reader to hold their breath. Read your draft aloud—if you stumble, the sentence is too long. Cut every adjective that does no work. Replace vague nouns with specific ones. Writing is rewriting, so expect to revise more than once. In the end, respect the reader’s time, and they will reward you with their attention.', zh:'好文章不靠花哨的词，而靠清晰的思考。动笔前，先想清楚你希望读者记住的唯一要点。然后用你能写出的最短而诚实的句子，平实地说出来。避免堆砌从句，逼读者屏住呼吸。把草稿朗读出来——若你磕绊，那句便太长。删掉每一个不干活的形容词，用具体的名词替换含糊的。写作即重写，所以要做好反复修改的准备。归根结底，尊重读者的时间，他们便会以注意力回报你。', note:'fancy 花哨的；clause 从句；draft 草稿；stumble 磕绊；revise 修改。'},
+  {title:'为什么睡眠不是浪费', author:'佚名', en:'In a culture that glorifies busyness, sleep is often treated as lost time. But during sleep, the brain sorts the day’s memories, clears waste, and resets mood. Skimp on it, and attention frays, decisions sour, and emotions flare. A consistent schedule matters more than total hours: waking at the same time trains your internal clock. Screens before bed delay sleep by suppressing melatonin. If you cannot fall asleep, get up and read something calm rather than staring at the ceiling. Protect sleep not as a luxury, but as the foundation that makes the waking hours worthwhile.', zh:'在一个崇尚"忙碌"的文化里，睡眠常被当作被浪费的时间。然而在睡眠中，大脑整理白天的记忆、清除废物、重置情绪。亏待它，注意力便会涣散，决策变差，情绪易爆。规律的作息比总时长更重要：固定时间起床能训练你的生物钟。睡前的屏幕通过抑制褪黑素而推迟入睡。若睡不着，起身读点平静的东西，好过盯着天花板。把睡眠当作基石而非奢侈品来保护——它让清醒的时光值得一过。', note:'glorify 赞美；fray 涣散；melatonin 褪黑素；suppress 抑制；worthwhile 值得的。'},
+  {title:'深度工作的回报', author:'佚名', en:'Shallow work—emails, chats, tiny tasks—keeps us busy but rarely moves us forward. Deep work is the focused, undistracted effort that produces real value. It is uncomfortable at first, because the mind craves novelty. But like a muscle, focus strengthens with use. Try protecting a single block of ninety minutes each day, phone in another room, for one task only. You will be surprised how much clearer thinking becomes. In an age of constant interruption, the ability to concentrate deeply is becoming rare—and therefore precious.', zh:'浮浅工作——邮件、聊天、琐碎任务——让我们忙个不停，却很少推动我们前进。深度工作，是专注而无干扰、能创造真实价值的努力。起初它令人不适，因为心智渴求新鲜感。但专注如肌肉，越用越强。试着每天守住一段九十分钟的整块时间，手机放在另一个房间，只做一件事。你会惊讶于思维变得多么清晰。在一个不断被打断的时代，深度专注的能力正变得稀缺——因而愈发珍贵。', note:'shallow 浮浅的；undistracted 不分心的；crave 渴求；novelty 新鲜感；interruption 打断。'},
+  {title:'把批评变成礼物', author:'佚名', en:'Criticism stings, especially when it feels unfair. The first instinct is to defend. But a useful habit is to pause and separate the message from the messenger. Even a harsh comment may contain one true point worth keeping. Ask yourself what you could do differently, not whether the person was kind. Not all feedback deserves action—some reflects the giver more than you. Yet dismissing everything closes the door to growth. The skilled learner filters quickly, keeps what helps, and lets the rest pass like weather.', zh:'批评令人刺痛，尤其当它显得不公。第一反应往往是防卫。但一个有用的习惯是：先停顿，把"内容"与"传递者"分开。即便尖锐的评论，也可能藏着一条值得保留的真理。问自己"我能有什么不同做法"，而非"对方是否善意"。并非所有反馈都值得行动——有些更多折射出给予者而非你。然而一概拒之，便关上了成长之门。高明的学习者快速筛选，留下有用的，让其余如天气般掠过。', note:'sting 刺痛；defend 防卫；harsh 尖锐的；feedback 反馈；dismiss 摒弃。'},
+  {title:'旅行教给我们的', author:'佚名', en:'Travel is not only about photos in new places. It is about being a beginner again—lost, dependent, and quietly amazed. When the usual rules no longer apply, you notice how much you took for granted: language, directions, small kindnesses. Strangers become generous; a shared smile needs no translation. You return not with a changed passport alone, but with a softer certainty that the world holds many right ways to live. The best trips do not escape life; they remind you how to pay attention to it.', zh:'旅行不止是新地方的照片。它是重新做一名初学者——迷路、依赖、又悄悄惊叹。当熟悉的规则不再适用，你才注意到自己曾把多少事视为理所当然：语言、方向、微小的善意。陌生人变得慷慨；一个共通的微笑无需翻译。你归来时，改变的不仅是护照，更是一种更柔软的确信：世界上有许多种"正确"的生活方式。最好的旅程不是逃避生活，而是提醒你如何用心留意它。', note:'beginner 初学者；take for granted 视为理所当然；generous 慷慨的；certainty 确信；escape 逃避。'},
+  {title:'把心安放在此刻', author:'佚名', en:'The mind spends much of its time elsewhere—replaying the past or rehearsing the future. Yet life is only ever happening now. Mindfulness is the simple practice of returning attention to the present: the warmth of a cup, the sound of rain, the breath moving in and out. You need no special posture, only willingness to notice. When worries rise, label them gently and return. Over weeks, this small habit loosens the habit of rumination. You cannot stop the waves, but you can learn to float. Peace, it turns out, is not far away—it is here, one breath at a time.', zh:'心智大半时间都在别处——重播过去或排练未来。然而生活只在此刻发生。正念，无非是把注意力带回当下的简单练习：一杯的温热、雨声、进出的呼吸。你无需特殊姿势，只需愿意去觉察。当忧虑升起，轻轻为它命名，再回来。数周之后，这个小习惯会松开反刍的惯性。你无法阻止浪，却可以学会漂浮。原来平静并不遥远——它在此处，一次呼吸，又一次呼吸。', note:'replay 重播；rehearse 排练；mindfulness 正念；rumination 反刍/反复思虑；float 漂浮。'},
+/* TED 演讲精华（双语，离线可读） */
+{title:'脆弱的力量', author:'Brené Brown · TED', src:'TED', en:"Brené Brown spent years studying vulnerability, and what she found overturned her own assumptions. We live in a culture that tells us vulnerability is weakness, yet the data points the other way: vulnerability is actually the birthplace of love, belonging, joy, and creativity. The people who feel most connected are the ones willing to be seen, imperfections and all. Numbing the hard emotions does not selectively work—when we numb fear and shame, we also numb joy and gratitude. The courage to be imperfect, to say 'I love you' first, to do something where there are no guarantees—that is where wholehearted living begins.", zh:'布琳·布朗花数年研究"脆弱"，结果推翻了她自己的假设。我们身处的文化告诉我们脆弱是软弱，但数据指向相反的方向：脆弱其实是爱、归属、喜悦与创造力的诞生地。那些感到最联结的人，正是愿意被看见的人，连同所有不完美。麻痹难受的情绪并不会"选择性生效"——当我们麻痹恐惧与羞耻，也一并麻痹了喜悦与感恩。敢于不完美、敢先说"我爱你"、敢做没有保证的事——全心全意的生活正由此开始。', note:'vulnerability 脆弱；assumption 假设；birthplace 诞生地；numb 麻痹；wholehearted 全心全意的。'},
+{title:'从"为什么"开始', author:'Simon Sinek · TED', src:'TED', en:"Simon Sinek noticed that great leaders and companies all communicate in the opposite direction from everyone else. Most people start with what they do, then how, and rarely reach why. But inspiring leaders begin with why—a purpose, a cause, a belief. The 'Golden Circle' explains why some organizations move people while others do not. It is not about facts and features; people do not buy what you make, they buy why you make it. When you start with why, you attract those who believe what you believe—and that shared belief is what turns customers into loyal followers.", zh:'西蒙·斯涅克发现，伟大的领导者与公司，沟通方向与常人相反。多数人从"做什么"开始，再到"怎么做"，却很少触及"为什么"。而鼓舞人心的领导者从"为什么"开始——一个目的、一个缘由、一份信念。"黄金圈"解释了为何有些组织能打动人，有些却不能。关键不在事实与功能：人们买的不是你做什么，而是你为什么做。当你从"为什么"出发，便吸引来那些与你信念相同的人——正是这份共同信念，把顾客变成忠实的追随者。', note:'communicate 沟通；inspiring 鼓舞人心的；feature 功能；loyal 忠实的；attract 吸引。'},
+{title:'拖延症患者的大脑', author:'Tim Urban · TED', src:'TED', en:"Tim Urban realized that the brain of a chronic procrastinator contains an Instant Gratification Monkey that hijacks the steering wheel, abandoning long-term goals for easy, fun tasks. The Rational Decision-Maker is left helpless—until the Panic Monster appears. The Panic Monster is the only thing the monkey fears, and it awakens whenever a deadline looms or public embarrassment threatens. The problem with long-term projects is that the monster never shows up, so we surf the internet while quietly ruining our future selves. The antidote is simple: notice the monkey, and shrink every big task into the smallest possible first step.", zh:'蒂姆·厄本发现，拖延症患者的大脑里住着一只"即时满足猴"，它会抢走方向盘，为了轻松有趣的事抛下长期目标，留下"理性决策者"无能为力——直到"恐慌怪兽"出现。恐慌怪兽是猴子唯一害怕的东西，它在截止日逼近或当众出丑的威胁降临时苏醒。长期项目的问题在于怪兽从不出现，于是我们一边上网冲浪，一边悄悄毁掉未来的自己。解药很简单：察觉那只猴子，并把每个大任务拆成尽可能小的第一步。', note:'chronic 长期的；gratification 满足；hijack 劫持；deadline 截止日；antidote 解药。'},
+{title:'坚毅：激情与毅力', author:'Angela Duckworth · TED', src:'TED', en:"Angela Duckworth left a high-flying consulting job to teach seventh graders math, and she noticed something puzzling: the most successful students were not always the most talented. Some naturally gifted kids struggled, while others with average ability pushed through. After years of research across cadets, salespeople, and students, one trait predicted success more than IQ or talent: grit. Grit is passion and perseverance for long-term goals—the stamina to keep going after failure, to treat life as a marathon rather than a sprint. Talent is how quickly you improve with effort, but effort counts twice: it builds skill, and then turns skill into achievement.", zh:'安杰拉·达克沃斯离开光鲜的咨询工作去教初一数学，她发现一件令人困惑的事：最成功的学生未必最有天赋。一些天赋出众的孩子苦苦挣扎，而能力平平者却坚持下来。经过多年对学员、销售与学生的研究，有一个特质比智商或天赋更能预测成功：坚毅。坚毅是对长期目标的激情与毅力——在失败后继续前行的耐力，把人生当作马拉松而非短跑。天赋决定你努力时进步的快慢，但努力要算两次：它构建技能，再把技能转化为成就。', note:'puzzling 令人困惑的；gifted 有天赋的；perseverance 毅力；stamina 耐力；achievement 成就。'},
+{title:'身体语言塑造你自己', author:'Amy Cuddy · TED', src:'TED', en:"Amy Cuddy's research asks a simple question: does our body language affect how others see us, and also how we see ourselves? Power poses—expanding the body, taking up space—have measurable effects: after just two minutes, they lower stress hormones and raise confidence markers. The finding is not about faking strength to impress others, but about genuinely changing your own physiology. Her advice is the two-minute rule: before a stressful situation, stand like Wonder Woman in private. You may not yet feel confident, but tiny postural changes can nudge your mind to catch up. 'Fake it till you become it.'", zh:'艾米·卡迪的研究提出了一个简单的问题：身体语言是否影响别人对我们的看法，也影响我们对自己的看法？力量姿势——舒展身体、占据空间——有可测量的效果：仅两分钟后，压力激素下降，自信指标上升。这个发现并非教你假装强大去取悦他人，而是真正改变自身的生理状态。她的建议是"两分钟法则"：在压力情境前，私下像神奇女侠那样站立。你也许还没感到自信，但微小的姿态改变能推动心智跟上。"假装，直到你成为它。"', note:'measurable 可测量的；hormone 激素；physiology 生理；postural 姿态的；nudge 推动。'},
+{title:'成长型思维的力量', author:'Carol Dweck · TED', src:'TED', en:"Carol Dweck identified two mindsets that shape how people approach challenge. In a fixed mindset, people believe ability is set—you either have it or you don't, so failure means 'I'm not good enough.' In a growth mindset, people believe abilities can be developed through effort and strategy, so failure becomes information about what to try next. The word that signals growth is 'yet': not 'I can't do this,' but 'I can't do this yet.' Praising intelligence can actually shrink children's willingness to take risks, while praising effort and process builds resilience. When we reframe difficulty as the workout that grows the brain, learning stops being a verdict and becomes a path.", zh:'卡罗尔·德韦克发现了两种影响人们面对挑战的思维模式。固定型思维的人相信能力是天定的——你有就是有，没有就是没有，于是失败意味着"我不够好"。成长型思维的人相信能力可以通过努力和策略发展，于是失败变成了"下一步该试什么"的信息。标志着成长的词是"还"：不是"我做不到"，而是"我还做不到"。夸赞聪明反而会减少孩子冒险的意愿，而夸赞努力与过程则建立韧性。当我们把困难重新框定为锻炼大脑的"训练"，学习就不再是判决，而成为一条路径。', note:'mindset 思维模式；fixed 固定的；strategy 策略；resilience 韧性；verdict 判决。'},
+{title:'快乐的优势', author:'Shawn Achor · TED', src:'TED', en:"Shawn Achor argues that we have the formula backwards. We think success leads to happiness, but the brain actually works the other way: a positive brain performs better on nearly every measure—creativity, energy, productivity. If happiness is the goal, we should raise optimism in the present, not chase it after the next achievement. His research found that small daily habits rewire the brain over three weeks: write down three gratitudes, journal one positive experience, exercise, meditate, and send a kind email. Happiness, it turns out, is not the finish line of success; it is the starting line of performance.", zh:'肖恩·阿克尔认为我们把公式弄反了。我们以为成功会带来快乐，但大脑其实反过来运作：积极的大脑在几乎每一项指标上都表现更好——创造力、精力、生产力。如果快乐是目标，我们应该在当下提升乐观，而非等到下一个成就之后。他的研究发现，一些小小的日常习惯能在三周内重塑大脑：写下三件感恩、记录一段正向经历、运动、冥想、发一封善意的邮件。原来快乐并非成功的终点线，而是表现的起跑线。', note:'formula 公式；optimism 乐观；achievement 成就；journal 记日记；meditate 冥想。'},
+{title:'尝试新事物30天', author:'Matt Cutts · TED', src:'TED', en:"Matt Cutts offers a tiny, practical idea: try something new for 30 days. The logic is that 30 days is just long enough to form a habit and just short enough to feel approachable. Instead of vague year-long resolutions that quietly fade by February, pick one concrete challenge: take a photo every day, write 1,500 words, bike to work, give up sugar. Two things tend to happen. First, the days become more memorable, because each one contains a small new thread. Second, self-confidence grows as you prove, month after month, that you can keep a promise to yourself. Small changes, sustained, are anything but small.", zh:'马特·卡茨提出了一个小而实用的点子：用30天尝试一件新事。逻辑是，30天既够长以养成习惯，又够短以让人觉得可亲近。与其立下模糊的年度决心、到二月便悄悄消散，不如挑一个具体的挑战：每天拍一张照、写1500字、骑车上班、戒糖。往往有两件事会发生：其一，日子变得更难忘，因为每一天都多了一条小小的新的线索；其二，自信心会增长，因为你一个月接一个月地向自己证明：你能对自己信守承诺。微小的改变，若能持续，就一点都不小。', note:'approachable 可亲近的；vague 模糊的；resolution 决心；concrete 具体的；sustain 持续。'}
+];
+/* 新闻热点：内置知识词条（离线可读，每天轮换一条） */
+/* 新闻热点：爬取自央视新闻 / 人民网 / 新华网 / 百度热点 的当日真实新闻（含真实原文链接） */
+const NEWS=[
+  {title:'我国加快自然资源“一张图”建设', url:'https://news.cctv.com/2026/08/12/ARTIT3hFDKyNK25EDr4tuDJV260812.shtml', src:'央视新闻'},
+  {title:'上半年 规上互联网企业完成业务收入超万亿元', url:'https://news.cctv.com/2026/08/12/ARTIOnBl2e00XtHijqeVC3ol260812.shtml', src:'央视新闻'},
+  {title:'7月份中国电商物流指数为111.2点', url:'https://news.cctv.com/2026/08/12/ARTIYYyiVKlZ6KGMX2jMnkGM260812.shtml', src:'央视新闻'},
+  {title:'国家防总、应急管理部针对山西启动防汛四级应急响应', url:'https://tv.cctv.com/2026/08/12/VIDET1kY4pNRpR8jDC2CfwBA260812.shtml', src:'央视新闻'},
+  {title:'截至今年6月 我国可再生能源制氢产能规模超140万吨', url:'https://tv.cctv.com/2026/08/12/VIDEvqoWEhZY4LZS8Vr34RBM260812.shtml', src:'央视新闻'},
+  {title:'南非启动应急响应严防埃博拉疫情蔓延', url:'https://tv.cctv.com/2026/08/12/VIDEtjiEa6jywCnUiau5N44b260812.shtml', src:'央视新闻'},
+  {title:'深学笃行习近平外交思想 奋力开创中国特色大国外交新局面', url:'http://opinion.people.com.cn/n1/2026/0812/c461530-40777767.html', src:'人民网'},
+  {title:'中国元首外交彰显大国格局与担当', url:'http://politics.people.com.cn/n1/2026/0713/c461001-40759266.html', src:'人民网'},
+  {title:'中国元首外交为动荡世界注入稳定力量', url:'http://politics.people.com.cn/n1/2026/0420/c461001-40705042.html', src:'人民网'},
+  {title:'新华网文化观察', url:'https://www.news.cn/zt/xhwwhgc/index.html', src:'新华网'},
+  {title:'新华网民生观察', url:'https://www.news.cn/zt/xhwmsgc/index.html', src:'新华网'},
+  {title:'大“申”说辟谣工作室', url:'https://www.news.cn/xhwwhjzggs/dashenshuo.html', src:'新华网'},
+  {title:'上半年结婚登记327.5万对', url:'https://www.baidu.com/s?wd=%E4%B8%8A%E5%8D%8A%E5%B9%B4%E7%BB%93%E5%A9%9A%E7%99%BB%E8%AE%B0327.5%E4%B8%87%E5%AF%B9', src:'百度热点'},
+  {title:'新冠病例增加怎么看 怎么办', url:'https://www.baidu.com/s?wd=%E6%96%B0%E5%86%A0%E7%97%85%E4%BE%8B%E5%A2%9E%E5%8A%A0%E6%80%8E%E4%B9%88%E7%9C%8B', src:'百度热点'},
+  {title:'中国风热词上新', url:'https://www.baidu.com/s?wd=%E4%B8%AD%E5%9B%BD%E9%A3%8E%E7%83%AD%E8%AF%8D%E4%B8%8A%E6%96%B0', src:'百度热点'},
+  {title:'高价洞洞鞋卖不动了', url:'https://www.baidu.com/s?wd=%E9%AB%98%E4%BB%B7%E6%B4%9E%E6%B4%9E%E9%9E%8B%E5%8D%96%E4%B8%8D%E5%8A%A8%E4%BA%86', src:'百度热点'},
+  {title:'毛宁向世界分享中国水陆两栖车', url:'https://www.baidu.com/s?wd=%E6%AF%9B%E5%AE%81%E5%90%91%E4%B8%96%E7%95%8C%E5%88%86%E4%BA%AB%E4%B8%AD%E5%9B%BD%E6%B0%B4%E9%99%86%E4%B8%A4%E6%A0%96%E8%BD%A6', src:'百度热点'},
+  {title:'你家老小区将迎巨变', url:'https://www.baidu.com/s?wd=%E4%BD%A0%E5%AE%B6%E8%80%81%E5%B0%8F%E5%8C%BA%E5%B0%86%E8%BF%8E%E5%B7%A8%E5%8F%98', src:'百度热点'},
+  {title:'武大靖出任中国短道速滑队主教练', url:'https://www.baidu.com/s?wd=%E6%AD%A6%E5%A4%A7%E9%9D%96%E5%87%BA%E4%BB%BB%E4%B8%AD%E5%9B%BD%E7%9F%AD%E9%81%93%E9%80%9F%E6%BB%91%E9%98%9F%E4%B8%BB%E6%95%99%E7%BB%83', src:'百度热点'},
+  {title:'中国水陆两栖车亮相引关注', url:'https://www.baidu.com/s?wd=%E4%B8%AD%E5%9B%BD%E6%B0%B4%E9%99%86%E4%B8%A4%E6%A0%96%E8%BD%A6', src:'百度热点'},
+  {title:'多地推进老旧小区改造提速', url:'https://www.baidu.com/s?wd=%E8%80%81%E6%97%A7%E5%B0%8F%E5%8C%BA%E6%94%B9%E9%80%A0', src:'百度热点'}
+  ,{title:'武大靖出任中国短道速滑队主教练', url:'https://s.weibo.com/weibo?q=%E6%AD%A6%E5%A4%A7%E9%9D%96%E5%87%BA%E4%BB%BB%E4%B8%AD%E5%9B%BD%E7%9F%AD%E9%81%93%E9%80%9F%E6%BB%91%E9%98%9F%E4%B8%BB%E6%95%99%E7%BB%83', src:'微博热搜'}
+  ,{title:'C罗宣布结婚', url:'https://s.weibo.com/weibo?q=C%E7%BD%97%E5%AE%A3%E5%B8%83%E7%BB%93%E5%A9%9A', src:'微博热搜'}
+  ,{title:'活力数据感知经济发展稳进好', url:'https://s.weibo.com/weibo?q=%E6%B4%BB%E5%8A%9B%E6%95%B0%E6%8D%AE%E6%84%9F%E7%9F%A5%E7%BB%8F%E6%B5%8E%E5%8F%91%E5%B1%95%E7%A8%B3%E8%BF%9B%E5%A5%BD', src:'微博热搜'}
+  ,{title:'B级满配家轿海豹06上市9.99万起', url:'https://s.weibo.com/weibo?q=B%E7%BA%A7%E6%BB%A1%E9%85%8D%E5%AE%B6%E8%BD%BF%E6%B5%B7%E8%B1%B906%E4%B8%8A%E5%B8%839.99%E4%B8%87%E8%B5%B7', src:'微博热搜'}
+  ,{title:'邵兵 退赛', url:'https://s.weibo.com/weibo?q=%E9%82%B5%E5%85%B5%20%E9%80%80%E8%B5%9B', src:'微博热搜'}
+  ,{title:'股民称中签宇树不敢发朋友圈', url:'https://s.weibo.com/weibo?q=%E8%82%A1%E6%B0%91%E7%A7%B0%E4%B8%AD%E7%AD%BE%E5%AE%87%E6%A0%91%E4%B8%8D%E6%95%A2%E5%8F%91%E6%9C%8B%E5%8F%8B%E5%9C%88', src:'微博热搜'}
+  ,{title:'原来姚安娜是艺名', url:'https://s.weibo.com/weibo?q=%E5%8E%9F%E6%9D%A5%E5%A7%9A%E5%AE%89%E5%A8%9C%E6%98%AF%E8%89%BA%E5%90%8D', src:'微博热搜'}
+  ,{title:'龙餐馆差评被批文化殖民心态', url:'https://s.weibo.com/weibo?q=%E9%BE%99%E9%A4%90%E9%A6%86%E5%B7%AE%E8%AF%84%E8%A2%AB%E6%89%B9%E6%96%87%E5%8C%96%E6%AE%96%E6%B0%91%E5%BF%83%E6%80%81', src:'微博热搜'}
+  ,{title:'iPhone20Pro爆料', url:'https://s.weibo.com/weibo?q=iPhone20Pro%E7%88%86%E6%96%99', src:'微博热搜'}
+  ,{title:'高价洞洞鞋为什么卖不动了', url:'https://s.weibo.com/weibo?q=%E9%AB%98%E4%BB%B7%E6%B4%9E%E6%B4%9E%E9%9E%8B%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8D%96%E4%B8%8D%E5%8A%A8%E4%BA%86', src:'微博热搜'}
+  ,{title:'河南暴雨', url:'https://s.weibo.com/weibo?q=%E6%B2%B3%E5%8D%97%E6%9A%B4%E9%9B%A8', src:'微博热搜'}
+  ,{title:'虞书欣 张昊玥', url:'https://s.weibo.com/weibo?q=%E8%99%9E%E4%B9%A6%E6%AC%A3%20%E5%BC%A0%E6%98%8A%E7%8E%A5', src:'微博热搜'}
+  ,{title:'何以奇迹', url:'https://www.baidu.com/s?wd=%E4%BD%95%E4%BB%A5%E5%A5%87%E8%BF%B9', src:'热门'}
+  ,{title:'上半年结婚登记327.5万对', url:'https://www.baidu.com/s?wd=%E4%B8%8A%E5%8D%8A%E5%B9%B4%E7%BB%93%E5%A9%9A%E7%99%BB%E8%AE%B0327.5%E4%B8%87%E5%AF%B9', src:'热门'}
+  ,{title:'新冠病例增加怎么看 怎么办', url:'https://www.baidu.com/s?wd=%E6%96%B0%E5%86%A0%E7%97%85%E4%BE%8B%E5%A2%9E%E5%8A%A0%E6%80%8E%E4%B9%88%E7%9C%8B%20%E6%80%8E%E4%B9%88%E5%8A%9E', src:'热门'}
+  ,{title:'中国风热词上新', url:'https://www.baidu.com/s?wd=%E4%B8%AD%E5%9B%BD%E9%A3%8E%E7%83%AD%E8%AF%8D%E4%B8%8A%E6%96%B0', src:'热门'}
+  ,{title:'高价洞洞鞋卖不动了', url:'https://www.baidu.com/s?wd=%E9%AB%98%E4%BB%B7%E6%B4%9E%E6%B4%9E%E9%9E%8B%E5%8D%96%E4%B8%8D%E5%8A%A8%E4%BA%86', src:'热门'}
+  ,{title:'毛宁向世界分享中国水陆两栖车', url:'https://www.baidu.com/s?wd=%E6%AF%9B%E5%AE%81%E5%90%91%E4%B8%96%E7%95%8C%E5%88%86%E4%BA%AB%E4%B8%AD%E5%9B%BD%E6%B0%B4%E9%99%86%E4%B8%A4%E6%A0%96%E8%BD%A6', src:'热门'}
+  ,{title:'你家老小区将迎巨变', url:'https://www.baidu.com/s?wd=%E4%BD%A0%E5%AE%B6%E8%80%81%E5%B0%8F%E5%8C%BA%E5%B0%86%E8%BF%8E%E5%B7%A8%E5%8F%98', src:'热门'}
+  ,{title:'A股收盘：全市场超4100只个股上涨', url:'https://www.baidu.com/s?wd=A%E8%82%A1%E6%94%B6%E7%9B%98%EF%BC%9A%E5%85%A8%E5%B8%82%E5%9C%BA%E8%B6%854100%E5%8F%AA%E4%B8%AA%E8%82%A1%E4%B8%8A%E6%B6%A8', src:'热门'}
+  ,{title:'《八仙！》延长上映', url:'https://www.baidu.com/s?wd=%E3%80%8A%E5%85%AB%E4%BB%99%EF%BC%81%E3%80%8B%E5%BB%B6%E9%95%BF%E4%B8%8A%E6%98%A0', src:'热门'}
+  ,{title:'吴宜泽vs吉尔伯特', url:'https://www.baidu.com/s?wd=%E5%90%B4%E5%AE%9C%E6%B3%BDvs%E5%90%89%E5%B0%94%E4%BC%AF%E7%89%B9', src:'热门'}
+];
+function readingCard(r){
+  const tag = r.src==='TED' ? '<span class="src-tag ted">🎬 TED 演讲</span>' : `<span class="src-tag">📝 ${esc(r.src||'每日美文')}</span>`;
+  let body='';
+  if(r.en) body+=`<div class="read-en">${esc(r.en)}<button class="spk" data-act="speak" data-text="${esc(r.en)}" data-lang="en-US">🔊 朗读英文</button></div>`;
+  if(r.zh) body+=`<div class="read-zh">${esc(r.zh)}</div>`;
+  if(r.link) body+=`<div class="read-link"><a href="${esc(r.link)}" target="_blank" rel="noopener">🔗 阅读原文 / 观看演讲</a></div>`;
+  return `<div class="reader-card">
+    ${tag}
+    <h3>${esc(r.title)}</h3>
+    ${r.author?`<div class="au">${esc(r.author)}</div>`:''}
+    ${body}
+    ${r.note?`<div class="read-note">💡 ${esc(r.note)}</div>`:''}
+    <div id="readQuizBox">${readingQuizPanel(r)}</div>
+  </div>`;
+}
+/* 每日阅读：多关卡选择题小测验（基于文章生词，确定性生成不跳变） */
+let _ALL_WORDS=null;
+function parseNote(note){
+  if(!note) return [];
+  const out=[];
+  note.split('；').forEach(part=>{
+    part=part.trim(); if(!part) return;
+    const sp=part.indexOf(' ');
+    if(sp<0){ out.push({word:part,cn:part}); return; }
+    const word=part.slice(0,sp).trim(), cn=part.slice(sp+1).trim().replace(/[。，]$/,'');
+    if(word) out.push({word,cn});
+  });
+  return out;
+}
+function allWords(){
+  if(_ALL_WORDS) return _ALL_WORDS;
+  const set=[], seen=new Set();
+  READINGS.forEach(r=> parseNote(r.note).forEach(w=>{ if(!seen.has(w.cn)){ seen.add(w.cn); set.push(w); } }));
+  _ALL_WORDS=set; return _ALL_WORDS;
+}
+function hashStr(s){ let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+function seededShuffle(arr,seed){
+  const a=arr.slice();
+  for(let i=a.length-1;i>0;i--){ seed=(seed*1103515245+12345)&0x7fffffff; const j=seed%(i+1); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function escapeRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+const READ_QSTAGES=['第1关 · 看词选义','第2关 · 看义选词','第3关 · 句子填空'];
+const READ_DECOYS=[{w:'vivid',cn:'生动的'},{w:'gentle',cn:'温柔的'},{w:'ordinary',cn:'平凡的'},{w:'brave',cn:'勇敢的'},{w:'silent',cn:'安静的'},{w:'ancient',cn:'古老的'},{w:'tender',cn:'柔软的'},{w:'calm',cn:'平静的'},{w:'noble',cn:'高尚的'},{w:'humble',cn:'谦逊的'}];
+function articleWords(r){
+  if(r.words && r.words.length) return r.words.map(x=>({word:x.w||x.word, cn:x.cn}));
+  return parseNote(r.note);
+}
+function rqOpts(correct, decoyPool, seed){
+  const d=seededShuffle(decoyPool, seed).slice(0,3);
+  return seededShuffle([correct, d[0], d[1], d[2]], (seed^0x9e3779b9)>>>0);
+}
+function rqSentences(r, words, seed){
+  const text = r.en || '';
+  if(!text) return [];
+  const sentences=text.split(/(?<=[.!?])\s+/).filter(s=>s.length<220 && s.length>24);
+  const out=[];
+  const targets = (words && words.length) ? words : null;
+  for(const sent of sentences){
+    if(out.length>=3) break;
+    let word=null, re=null;
+    if(targets){
+      for(const w of targets){
+        const rx=new RegExp('\\b'+escapeRe(w.word)+'\\b','i');
+        if(rx.test(sent)){ word=w.word; re=rx; break; }
+      }
+    } else {
+      // 没有现成生词时，取句中较长的英文词填空，保证有题可做
+      const m=sent.match(/[A-Za-z]{5,}/g);
+      if(m){ m.sort((a,b)=>b.length-a.length); word=m[0]; re=new RegExp('\\b'+escapeRe(word)+'\\b','i'); }
+    }
+    if(word) out.push({type:'blank', word:word, prompt:'填空：'+sent.replace(re,'______'), answer:word});
+  }
+  return out;
+}
+function buildReadStages(r){
+  const words=articleWords(r);
+  const hasWords = words && words.length>=2;
+  const decoy = hasWords ? words.map(x=>({w:x.word,cn:x.cn})).concat(READ_DECOYS) : READ_DECOYS;
+  const seed=hashStr(r.title||'x');
+  const stages=[];
+  if(hasWords){
+    const s1=[], s2=[];
+    words.slice(0,3).forEach((w,qi)=>{
+      const d1=decoy.filter(x=>x.cn!==w.cn).map(x=>x.cn);
+      s1.push({type:'w2cn', prompt:`「${esc(w.word)}」 是什么意思？`, options:rqOpts(w.cn, d1, seed+qi*7+1), answer:w.cn, picked:null, ok:null});
+      const d2=decoy.filter(x=>x.w!==w.word).map(x=>x.w);
+      s2.push({type:'cn2w', prompt:`「${esc(w.cn)}」 对应的单词是？`, options:rqOpts(w.word, d2, seed+qi*7+2), answer:w.word, picked:null, ok:null});
+    });
+    stages.push(s1,s2);
+  }
+  // 第三关「句子填空」：有生词就用生词，没有就取长词，英文正文都能出
+  const s3=rqSentences(r, hasWords?words:[], seed+99).map(q=>({...q, options:rqOpts(q.answer, decoy.filter(x=>x.w!==q.answer).map(x=>x.w), seed+200), picked:null, ok:null}));
+  if(s3.length) stages.push(s3);
+  return stages.length?stages:null;
+}
+function readingQuizPanel(r){
+  const key=r.title;
+  const g=ui.readQuiz[key];
+  const words=articleWords(r);
+  if(!words || words.length<2){
+    return `<div class="read-quiz"><div class="rq-head">💡 这篇生词较少，先静心读一读吧～</div></div>`;
+  }
+  if(!g || g.phase==='idle'){
+    return `<div class="read-quiz">
+      <div class="rq-head">💡 小测验 · 选择题闯关</div>
+      <p class="mute" style="margin:8px 0 12px">用本篇生词玩几关，闯完记得更牢 🌟</p>
+      <button class="b-pink rq-start" data-act="readQuizStart" data-key="${esc(key)}">▶ 开始复习</button>
+    </div>`;
+  }
+  if(g.phase==='done'){
+    const pct=Math.round(g.score/g.total*100);
+    return `<div class="read-quiz">
+      <div class="rq-head">🏆 复习完成！</div>
+      <div class="rq-result">总得分 <b>${g.score}</b> / ${g.total} <span class="mute">(${pct}%)</span></div>
+      <div class="rq-emoji">${pct===100?'🌟 全对，词汇小达人！':pct>=70?'🎉 很棒，常回看更稳':'💪 多来几轮就记住啦'}</div>
+      <button class="b-pink rq-start" data-act="readQuizReplay" data-key="${esc(key)}">🔁 再复习一次</button>
+    </div>`;
+  }
+  if(g.phase==='stageDone'){
+    const s=g.stage, got=g.stages[s].filter(q=>q.ok).length, tot=g.stages[s].length, last=s>=g.stages.length-1;
+    return `<div class="read-quiz">
+      <div class="rq-head">${READ_QSTAGES[s]||('第'+(s+1)+'关')} 完成 🎊</div>
+      <div class="rq-result">本关 <b>${got}</b> / ${tot} 正确</div>
+      <div class="rq-emoji">${got===tot?'✨ 完美通关！':got>=Math.ceil(tot*0.6)?'👍 不错，下一关继续':'💡 错题记得回头看哦'}</div>
+      <button class="b-pink rq-start" data-act="${last?'readQuizFinish':'readQuizNextStage'}" data-key="${esc(key)}">${last?'查看总成绩 🏆':'进入下一关 ▶'}</button>
+    </div>`;
+  }
+  // playing
+  const qs=g.stages[g.stage], q=qs[g.i], meta=READ_QSTAGES[g.stage]||('第'+(g.stage+1)+'关');
+  let optsTxt='';
+  q.options.forEach((o,oi)=>{
+    let cls='eng-opt';
+    if(q.picked!==null){ if(o===q.answer) cls+=' correct'; else if(oi===q.picked) cls+=' wrong'; }
+    optsTxt+=`<button class="${cls}" data-act="readQuizAnswer" data-key="${esc(key)}" data-q="${g.i}" data-opt="${oi}" ${q.picked!==null?'disabled':''}>${esc(o)}</button>`;
+  });
+  const fb = q.picked!==null ? `<div class="eng-fb ${q.ok?'ok':'no'}">${q.ok?'✅ 答对了！':'❌ 正确答案：'+esc(q.answer)}</div>` : '';
+  const nb = q.picked!==null ? `<button class="b-soft eng-next" data-act="readQuizNext" data-key="${esc(key)}">${g.i+1>=qs.length?'本关完成 🎊':'下一题 →'}</button>` : '';
+  return `<div class="read-quiz">
+    <div class="rq-head">${meta} <span class="mute" style="font-size:12px">第 ${g.i+1}/${qs.length} 题</span></div>
+    <div class="eng-q">${q.prompt}</div>
+    <div class="eng-opts">${optsTxt}</div>
+    ${fb}${nb?('<div style="margin-top:12px">'+nb+'</div>'):''}
+  </div>`;
+}
+function refreshReadQuiz(){
+  const box=document.getElementById('readQuizBox');
+  if(box && ui.curRead) box.innerHTML=readingQuizPanel(ui.curRead);
+}
+function srcClass(s){ return s==='央视新闻'?'src-cctv':s==='人民网'?'src-people':s==='新华网'?'src-xinhua':s==='微博热搜'?'src-weibo':s==='抖音热点'?'src-douyin':s==='小红书热点'?'src-xhs':s==='热门'?'src-hot2':'src-hot'; }
+function copyNewsUrl(btn){
+  const u = btn.getAttribute('data-url');
+  const done = () => toast('链接已复制，可粘贴到浏览器打开');
+  try { navigator.clipboard.writeText(u).then(done, () => fallbackCopy(u, done)); }
+  catch(e){ fallbackCopy(u, done); }
+}
+function fallbackCopy(text, cb){
+  const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){ toast('复制失败，请长按链接'); }
+  document.body.removeChild(ta);
+}
+function platScheme(src, kw){
+  // 用 App 自己的唤起协议直接跳转软件（而非 web 链接，避免被 App 抢走后打不开）
+  if(src==='抖音热点') return 'snssdk1128://search?keyword='+encodeURIComponent(kw);
+  if(src==='小红书热点') return 'xhs://search?keyword='+encodeURIComponent(kw);
+  return '';
+}
+function openAppOrWeb(a){
+  const scheme=a.getAttribute('data-scheme');
+  const web=a.getAttribute('data-web');
+  if(!scheme){ window.open(web,'_blank','noopener'); return; }
+  const t=Date.now(); let gone=false;
+  const vis=()=>{gone=true;};
+  document.addEventListener('visibilitychange', vis, {once:true});
+  try{ window.location.href=scheme; }catch(e){}
+  setTimeout(function(){
+    document.removeEventListener('visibilitychange', vis);
+    if(!gone && Date.now()-t<3000){ window.open(web,'_blank','noopener'); }
+  }, 2500);
+}
+function newsItemCard(n){
+  const hot = n.hot ? `<span class="news-hot">🔥${esc(String(n.hot))}</span>` : '';
+  const copy = `<button class="news-copy" data-url="${esc(n.url)}" title="复制链接"
+    onclick="event.preventDefault();event.stopPropagation();copyNewsUrl(this)">⧉</button>`;
+  // 直接用官方通用链接(n.url)；手机浏览器/已装 App 点击会直接唤起对应 App，不再走失效的私有 scheme
+  return `<a class="news-item" href="${esc(n.url)}" target="_blank" rel="noopener">
+    <span class="news-src ${srcClass(n.src)}">${esc(n.src)}</span>
+    <span class="news-title">${esc(n.title)}</span>
+    ${hot}
+    ${copy}
+    <span class="news-go">↗</span>
+  </a>`;
+}
+/* 新闻平台筛选：左侧竖排侧栏 + 单列列表，点 🔃 进入排序可拖动 */
+const PLATFORMS=[
+  {key:'央视新闻', label:'央视'},
+  {key:'新华网',   label:'新华网'},
+  {key:'人民网',   label:'人民网'},
+  {key:'微博热搜', label:'微博热搜'},
+  {key:'百度热点', label:'百度热点'},
+  {key:'抖音热点', label:'抖音热点'},
+  {key:'小红书热点', label:'小红书热点'},
+  {key:'热门',     label:'热门榜'}
+];
+function filterNews(items){
+  const f=ui.newsFilter||'全部';
+  if(f==='全部') return items;
+  if(f==='热门'){  // 综合热门：每个平台取前几条合并，保证有内容
+    const bySrc={};
+    items.forEach(n=>{ (bySrc[n.src]=bySrc[n.src]||[]).push(n); });
+    return Object.values(bySrc).flatMap(arr=>arr.slice(0,4));
+  }
+  return items.filter(n=>n && n.src===f);
+}
+function newsOrder(){
+  const all=PLATFORMS.map(p=>p.key);
+  const saved=(DB.newsOrder||[]).filter(k=>all.includes(k));
+  const ordered=saved.slice();
+  all.forEach(k=>{ if(!ordered.includes(k)) ordered.push(k); });
+  const i=ordered.indexOf('热门');          // 热门（综合聚合）始终置底
+  if(i>=0){ ordered.splice(i,1); ordered.push('热门'); }
+  DB.newsOrder=ordered; return ordered;
+}
+function renderNewsChips(){
+  const cur=ui.newsFilter||'全部';
+  const labels={全部:'全部'}; PLATFORMS.forEach(p=>labels[p.key]=p.label);
+  const chips=newsOrder();
+  return chips.map(c=>`<button class="news-chip${cur===c?' active':''}" data-src="${esc(c)}">${esc(labels[c]||c)}</button>`).join('');
+}
+function selectNewsFilter(src){
+  ui.newsFilter=src;
+  document.querySelectorAll('.news-chip').forEach(c=>c.classList.toggle('active', c.dataset.src===ui.newsFilter));
+  const listEl=document.getElementById('newsList');
+  if(listEl) listEl.innerHTML=renderNewsList();
+}
+let LIVE_NEWS=null;            // 由同源 news.json 加载的最新权威新闻（不走外部代理，秒回不超时）
+let newsTimer=null;            // 新闻每 60 秒自动拉取定时器
+function newsPool(){
+  if(LIVE_NEWS && LIVE_NEWS.length) return LIVE_NEWS;  // 在线：只用服务端实时抓取的数据（已含全部平台，避免拼上写死的旧兜底）
+  return NEWS;                 // 完全离线时的兜底
+}
+function renderNewsList(){
+  const items=filterNews(newsPool());
+  return items.length?items.map(newsItemCard).join(''):'<p class="news-loading">该平台暂无内容</p>';
+}
+/* 音乐：内置歌单（网易云 id，App 内播放 + 歌词）
+   所有 id 均经实测：完整音频(>2MB) + 有歌词。歌手与歌名均为真实曲目。 */
+const SONGS=[
+  {singer:'颜人中',name:'晚安',id:1359356908},
+  {singer:'颜人中',name:'有些',id:1406649619},
+  {singer:'颜人中',name:'留白',id:2747895881},
+  {singer:'颜人中',name:'我只能离开',id:1398283847},
+  {singer:'颜人中',name:'慢慢',id:3344470798},
+  {singer:'颜人中',name:'靠近',id:1399104439},
+  {singer:'张新成',name:'晚风',id:2077519210},
+  {singer:'张新成',name:'等你擦肩',id:32574170},
+  {singer:'张新成',name:'与你有关的秘密',id:1947406618},
+  {singer:'张新成',name:'这世界总会让你遍体鳞伤',id:2077519215},
+  {singer:'张新成',name:'梦想的模样',id:1369564240},
+  {singer:'张新成',name:'自言自语',id:1948181905},
+  {singer:'张新成',name:'靠近我',id:2077516623}
+];
+const METING='https://api.injahow.cn/meting/?server=netease&type=';
+const player={ idx:-1, lyrics:[], lrcEl:null, audio:null };
+function parseLrc(t){
+  const out=[];
+  (t||'').split('\n').forEach(line=>{
+    const m=line.match(/\[(\d+):(\d+)(?:[.:](\d+))?\]/);
+    if(m){ const t=(+m[1])*60+(+m[2])+(+(m[3]||0))/100; out.push({t,text:line.replace(/\[\d+:\d+(?:[.:]\d+)?\]/g,'').trim()}); }
+  });
+  return out;
+}
+function fmtTime(s){ if(!isFinite(s))return '0:00'; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+function loadSong(i, autoplay){
+  const s=SONGS[i]; if(!s) return;
+  player.idx=i; player.lyrics=[];
+  const a=player.audio;
+  a.src=METING+'url&id='+s.id;
+  a.load();
+  fetch(METING+'lrc&id='+s.id).then(r=>r.text()).then(t=>{
+    player.lyrics=parseLrc(t);
+    if(player.lrcEl) renderLyrics();
+  }).catch(()=>{ player.lyrics=[]; if(player.lrcEl) player.lrcEl.innerHTML='<p class="ti">暂无歌词</p>'; });
+  updateNowPlaying();
+  if(active==='music') renderView();
+  if(autoplay) a.play().catch(()=>toast('播放失败，换个网络再试～'));
+}
+function updateNowPlaying(){
+  const s=SONGS[player.idx]; if(!s) return;
+  const cv=$('#npCover'), nm=$('#npName'), sg=$('#npSinger'), pp=$('#npPlay');
+  if(cv) cv.textContent='🎵';
+  if(nm) nm.textContent=s.name;
+  if(sg) sg.textContent=s.singer;
+  if(pp) pp.textContent=player.audio&&!player.audio.paused?'⏸':'▶';
+  document.querySelectorAll('.song-row').forEach(r=>r.classList.toggle('playing', +r.dataset.i===player.idx));
+}
+function renderLyrics(){
+  const el=player.lrcEl; if(!el) return;
+  if(!player.lyrics.length){ el.innerHTML='<p class="ti">暂无歌词</p>'; return; }
+  el.innerHTML=player.lyrics.map((l,i)=>`<p data-i="${i}">${esc(l.text||'♪')}</p>`).join('');
+  syncLyrics(player.audio?player.audio.currentTime:0);
+}
+function syncLyrics(t){
+  const el=player.lrcEl; if(!el||!player.lyrics.length) return;
+  let cur=-1;
+  for(let i=0;i<player.lyrics.length;i++){ if(t>=player.lyrics[i].t) cur=i; else break; }
+  const ps=el.querySelectorAll('p');
+  ps.forEach((p,i)=>p.classList.toggle('on',i===cur));
+  if(cur>=0 && ps[cur]) ps[cur].scrollIntoView({block:'center',behavior:'smooth'});
+}
+function togglePlay(){
+  const a=player.audio;
+  if(player.idx<0){ loadSong(0,true); return; }
+  if(a.paused) a.play().catch(()=>toast('播放失败，换个网络再试～')); else a.pause();
+}
+function playStep(d){
+  if(player.idx<0){ loadSong(0,true); return; }
+  let n=(player.idx+d+SONGS.length)%SONGS.length;
+  loadSong(n,true);
+}
+function renderMusic(){
+  const groups={};
+  SONGS.forEach((s,i)=>{ (groups[s.singer]=groups[s.singer]||[]).push({s,i}); });
+  let list='';
+  for(const sg in groups){
+    list+=`<div class="song-group">${esc(sg)}</div>`;
+    groups[sg].forEach(({s,i})=>{
+      list+=`<div class="song-row" data-act="playSong" data-i="${i}">
+        <div class="sc">🎵</div>
+        <div class="sm"><div class="sn">${esc(s.name)}</div><div class="ss">${esc(s.singer)}</div></div>
+        <div class="sp">${player.idx===i?(player.audio&&!player.audio.paused?'⏸':'▶'):'▶'}</div>
+      </div>`;
+    });
+  }
+  const nowHtml = player.idx>=0
+    ? `<div class="np">
+        <div class="np-top">
+          <div class="np-cover" id="npCover">🎵</div>
+          <div class="np-meta"><div class="np-name" id="npName">${esc(SONGS[player.idx].name)}</div><div class="np-singer" id="npSinger">${esc(SONGS[player.idx].singer)}</div></div>
+        </div>
+        <div class="np-ctrl">
+          <button data-act="prevSong" title="上一首">⏮</button>
+          <button class="pp" id="npPlay" data-act="togglePlay">${player.audio&&!player.audio.paused?'⏸':'▶'}</button>
+          <button data-act="nextSong" title="下一首">⏭</button>
+        </div>
+        <div class="np-bar">
+          <span id="npCur">0:00</span>
+          <input type="range" id="npRange" min="0" max="100" value="0">
+          <span id="npDur">0:00</span>
+        </div>
+        <div class="lyrics" id="lyrics"></div>
+      </div>`
+    : `<div class="np" style="text-align:center;color:var(--text-soft)">点一首歌开始播放 🎧</div>`;
+  return `<div class="mod-head"><h2>🎵 音乐</h2><div class="stats"><span>${SONGS.length} 首</span><span class="pill">App 内播放</span></div></div>
+    ${nowHtml}
+    <div class="song-group" style="margin-top:18px">歌单</div>
+    ${list}`;
+}
+function renderClock(){
+  const n=new Date();
+  $('#clock').textContent=n.toLocaleTimeString('zh-CN',{hour12:false});
+  $('#date').textContent=n.toLocaleDateString('zh-CN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+function calcStreak(){
+  const set=new Set(DB.checkin.dates);
+  let d=new Date();
+  if(!set.has(todayStr(d))) d.setDate(d.getDate()-1);
+  let s=0;
+  while(set.has(todayStr(d))){ s++; d.setDate(d.getDate()-1); }
+  return s;
+}
+function renderCheckin(){
+  const t=todayStr();
+  const done=DB.checkin.dates.includes(t);
+  const btn=$('#checkinBtn');
+  btn.textContent=done?'今日已打卡 ✓':'今日打卡';
+  btn.classList.toggle('done',done);
+  $('#streak').textContent=`已连续打卡 ${calcStreak()} 天`;
+}
+function doCheckin(){
+  const t=todayStr();
+  const i=DB.checkin.dates.indexOf(t);
+  if(i>=0){ DB.checkin.dates.splice(i,1); toast('已取消今日打卡'); }
+  else{ DB.checkin.dates.push(t); toast('打卡成功，加油！🌟'); }
+  save(); renderCheckin();
+}
+function renderQuote(){
+  const q=QUOTES[dayOfYear()%QUOTES.length];
+  $('#quoteCn').textContent=q.cn;
+  $('#quoteEn').textContent=q.en;
+}
+
+/* ===================== 侧边栏 + 拖拽 ===================== */
+function renderSidebar(){
+  const ul=$('#nav'); ul.innerHTML='';
+  DB.navOrder.forEach(id=>{
+    const m=MODULES[id];
+    const li=document.createElement('li');
+    li.className='nav-item'+(id===active?' active':'');
+    li.dataset.id=id;
+    li.innerHTML=`<span class="nav-icon">${m.icon}</span><span class="nav-label">${esc(m.name)}</span>`;
+    ul.appendChild(li);
+  });
+}
+/* 通用指针拖拽排序：鼠标 + 触屏通用，自动区分 点击 / 拖拽 / 滚动 */
+function makeSortable(container, itemSel, opts){
+  const TH=7;
+  let startX=0,startY=0,item=null,pending=false,dragging=false,moved=false,clone=null,pid=null,horiz=false;
+  container.addEventListener('pointerdown',e=>{
+    const it=e.target.closest(itemSel); if(!it) return;
+    item=it; startX=e.clientX; startY=e.clientY;
+    pending=true; dragging=false; moved=false; pid=e.pointerId;
+    horiz=getComputedStyle(container).flexDirection.indexOf('row')>=0;
+    try{ container.setPointerCapture(pid); }catch(_){}
+  });
+  container.addEventListener('pointermove',e=>{
+    if(!pending) return;
+    const dx=e.clientX-startX, dy=e.clientY-startY;
+    if(!moved && Math.hypot(dx,dy)>8) moved=true;
+    if(!dragging){
+      const over=horiz ? (Math.abs(dx)>TH && Math.abs(dx)>Math.abs(dy)) : (Math.abs(dy)>TH && Math.abs(dy)>Math.abs(dx));
+      if(!over) return;
+      dragging=true;
+      const r=item.getBoundingClientRect();
+      const offX=startX-r.left, offY=startY-r.top;
+      clone=item.cloneNode(true);
+      clone.classList.add('sort-ghost'); clone.classList.remove('active');
+      clone.style.width=r.width+'px'; clone.style.height=r.height+'px';
+      clone.style.left=r.left+'px'; clone.style.top=r.top+'px';
+      document.body.appendChild(clone);
+      item.classList.add('sort-hidden');
+      item._off=[offX,offY];
+    }
+    const off=item._off;
+    clone.style.left=(e.clientX-off[0])+'px';
+    clone.style.top=(e.clientY-off[1])+'px';
+    const siblings=[...container.children].filter(el=>el!==item && el.matches(itemSel));
+    let ref=null;
+    for(const s of siblings){
+      const r=s.getBoundingClientRect();
+      const mid=horiz?r.left+r.width/2:r.top+r.height/2;
+      if((horiz?e.clientX:e.clientY)<mid){ ref=s; break; }
+    }
+    if(ref) container.insertBefore(item,ref); else container.appendChild(item);
+  });
+  function end(){
+    if(!pending) return;
+    if(dragging){
+      if(clone) clone.remove();
+      item.classList.remove('sort-hidden');
+      const keys=[...container.querySelectorAll(itemSel)].map(el=>opts.getKey(el));
+      opts.onReorder && opts.onReorder(keys);
+    }else if(!moved){
+      opts.onTap && opts.onTap(item);
+    }
+    pending=false; dragging=false; moved=false; item=null; clone=null;
+  }
+  container.addEventListener('pointerup',end);
+  container.addEventListener('pointercancel',end);
+}
+function bindSidebar(){
+  const ul=$('#nav');
+  makeSortable(ul,'.nav-item',{
+    getKey:el=>el.dataset.id,
+    onReorder:keys=>{ DB.navOrder=keys; save(); },
+    onTap:el=>{ active=el.dataset.id; renderSidebar(); renderView(); }
+  });
+}
+
+/* ===================== 视图渲染 ===================== */
+function renderView(){ $('#view').innerHTML = MODULES[active].render(); afterRender(); }
+function afterRender(){
+  if(active==='music'){
+    player.lrcEl=$('#lyrics');
+    if(player.idx>=0){ renderLyrics(); updateNowPlaying(); bindRange(); }
+  }
+  if(active==='news'){
+    const ns=document.querySelector('.news-side');
+    if(ns) makeSortable(ns,'.news-chip',{
+      getKey:el=>el.dataset.src,
+      onReorder:keys=>{ DB.newsOrder=keys; save(); },
+      onTap:el=>selectNewsFilter(el.dataset.src)
+    });
+  }
+}
+function bindRange(){
+  const r=$('#npRange'); if(!r) return;
+  r.addEventListener('input',()=>{ const a=player.audio; if(a&&a.duration) a.currentTime=a.duration*(r.value/100); });
+}
+
+/* --- 1. 英语学习 --- */
+/* 每天 4 个六级核心词：用与词库长度互质的步进，保证相邻天互不重叠 → 每天都是新词 */
+function todayEnglishWords(){
+  const n=CET6.length, base=dayOfYear()%n, step=17;
+  const arr=[];
+  for(let k=0;k<4;k++) arr.push(CET6[(base+k*step)%n]);
+  return arr;
+}
+const ENG_STAGES=[
+  {name:'第一关 · 小测', short:'小测', desc:'看词选义 / 看义选词'},
+  {name:'第二关 · 听音', short:'听音', desc:'听发音，选出单词'},
+  {name:'第三关 · 拼词', short:'拼词', desc:'把字母拼回原词'},
+];
+function engPool(words){ return CET6.filter(x=>!words.includes(x)); }
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function buildSpellTiles(w){
+  let t=shuffle(w.split(''));
+  if(t.join('')===w && t.length>1) t=shuffle(t);
+  return t;
+}
+function buildChoice(words){
+  const pool=engPool(words); const qs=[];
+  words.forEach(w=>{
+    const mode=Math.random()<0.5?'w2cn':'cn2w';
+    const correct= mode==='w2cn'? w.cn : w.w;
+    const distract=pool.slice(); let opts=[];
+    for(let d=0;d<3 && distract.length;d++){ const r=Math.floor(Math.random()*distract.length); const dw=distract.splice(r,1)[0]; opts.push(mode==='w2cn'?dw.cn:dw.w); }
+    opts.push(correct); opts=shuffle(opts);
+    const prompt= mode==='w2cn'
+      ? `<span class="eng-q-w">${esc(w.w)}</span> <button class="spk" data-act="speak" data-text="${esc(w.w)}">🔊</button><div class="eng-q-sub">这个词的意思是？</div>`
+      : `<div class="eng-q-cn">「${esc(w.cn)}」</div><div class="eng-q-sub">对应哪个单词？</div>`;
+    qs.push({type:'choice', prompt, options:opts, answer:correct, picked:null, ok:null});
+  });
+  return qs;
+}
+function buildListen(words){
+  const pool=engPool(words); const qs=[];
+  words.forEach(w=>{
+    const distract=pool.slice(); let opts=[w.w];
+    for(let d=0;d<3 && distract.length;d++){ const r=Math.floor(Math.random()*distract.length); const dw=distract.splice(r,1)[0]; opts.push(dw.w); }
+    opts=shuffle(opts);
+    const prompt=`<button class="eng-play" data-act="speak" data-text="${esc(w.w)}">🔊 点击播放发音</button><div class="eng-q-sub">听到的单词是？ （提示：「${esc(w.cn)}」）</div>`;
+    qs.push({type:'listen', prompt, options:opts, answer:w.w, picked:null, ok:null});
+  });
+  return qs;
+}
+function buildSpell(words){
+  return words.map(w=>({type:'spell', word:w.w, cn:w.cn, ph:w.ph, tiles:buildSpellTiles(w.w), filled:[], used:[], answer:w.w, ok:null}));
+}
+function buildEngStages(words){ return [buildChoice(words), buildListen(words), buildSpell(words)]; }
+function engStageScore(g,s){ return g.stages[s].filter(q=>q.ok).length; }
+function renderEngGame(){
+  const g=ui.eng;
+  if(!g || g.phase==='idle'){
+    return `<div class="eng-game">
+      <div class="eng-game-head">🎮 巩固闯关 <span class="mute" style="font-size:12px">3 关卡 · 用今天的新词</span></div>
+      <div class="eng-stages">${ENG_STAGES.map((s,i)=>`<span class="eng-chip">${i+1}. ${s.short}</span>`).join('')}</div>
+      <p class="mute" style="margin:8px 0 12px">三关小游戏一步步巩固今天的词，闯完有惊喜 🎁</p>
+      <button class="b-pink eng-start" data-act="engStart">▶ 开始闯关</button>
+    </div>`;
+  }
+  if(g.phase==='done'){
+    const totalQ=g.stages.reduce((a,s)=>a+s.length,0);
+    const pct=Math.round(g.score/totalQ*100);
+    return `<div class="eng-game">
+      <div class="eng-game-head">🏆 全部通关！</div>
+      <div class="eng-result">总得分 <b>${g.score}</b> / ${totalQ} <span class="mute">(${pct}%)</span></div>
+      <div class="eng-emoji">${pct===100?'🌟 满分通关，词汇小达人！':pct>=70?'🎉 很棒，记得常回看':'💪 多闯几轮就稳啦'}</div>
+      <button class="b-pink eng-start" data-act="engReplay">🔁 再闯一次</button>
+    </div>`;
+  }
+  if(g.phase==='stageDone'){
+    const s=g.stage, got=engStageScore(g,s), tot=g.stages[s].length, last=s>=ENG_STAGES.length-1;
+    return `<div class="eng-game">
+      <div class="eng-game-head">${ENG_STAGES[s].name} 完成 🎊</div>
+      <div class="eng-result">本关 <b>${got}</b> / ${tot} 正确</div>
+      <div class="eng-emoji">${got===tot?'✨ 完美通关！':got>=Math.ceil(tot*0.6)?'👍 不错，下一关继续':'💡 这一关的错题记得回头看哦'}</div>
+      <button class="b-pink eng-start" data-act="${last?'engFinish':'engNextStage'}">${last?'查看总成绩 🏆':'进入下一关 ▶'}</button>
+    </div>`;
+  }
+  // playing
+  const qs=g.stages[g.stage], q=qs[g.i], meta=ENG_STAGES[g.stage];
+  const head=`<div class="eng-game-head">${meta.name} <span class="mute" style="font-size:12px">第 ${g.i+1}/${qs.length} 题</span></div>`;
+  if(q.type==='spell'){
+    const slots=[]; for(let k=0;k<q.word.length;k++){ slots.push(`<span class="eng-slot ${q.filled[k]!==undefined?'filled':''}">${esc(q.filled[k]||'')}</span>`); }
+    const tiles=q.tiles.map((t,ti)=>`<button class="eng-tile ${q.used.includes(ti)?'used':''}" data-act="engSpell" data-i="${ti}" ${q.used.includes(ti)?'disabled':''}>${esc(t)}</button>`).join('');
+    let inner;
+    if(q.ok===null){
+      inner=`<div class="eng-slots">${slots.join('')}</div><div class="eng-tiles">${tiles}</div>
+        <div style="margin-top:12px;display:flex;gap:8px"><button class="b-soft" data-act="engSpellClear">⌫ 清空重拼</button></div>`;
+    } else {
+      const fb=`<div class="eng-fb ${q.ok?'ok':'no'}">${q.ok?'✅ 拼对啦！':'❌ 正确拼写：'+esc(q.answer)}</div>`;
+      const nb=`<button class="b-soft eng-next" data-act="engNext">${g.i+1>=qs.length?'本关完成 🎊':'下一题 →'}</button>`;
+      inner=`${fb}<div class="eng-slots">${slots.join('')}</div><div style="margin-top:12px">${nb}</div>`;
+    }
+    return `<div class="eng-game">${head}<div class="eng-q-cn">「${esc(q.cn)}」 <span class="eng-q-sub">${esc(q.ph)}</span></div>${inner}</div>`;
+  }
+  // choice / listen
+  let optsTxt='';
+  q.options.forEach((o,oi)=>{
+    let cls='eng-opt';
+    if(q.picked!==null){ if(o===q.answer) cls+=' correct'; else if(oi===q.picked) cls+=' wrong'; }
+    optsTxt+=`<button class="${cls}" data-act="engAnswer" data-i="${oi}" ${q.picked!==null?'disabled':''}>${esc(o)}</button>`;
+  });
+  const fb=q.picked!==null?`<div class="eng-fb ${q.ok?'ok':'no'}">${q.ok?'✅ 答对了！':'❌ 正确答案：'+esc(q.answer)}</div>`:'';
+  const nb=q.picked!==null?`<button class="b-soft eng-next" data-act="engNext">${g.i+1>=qs.length?'本关完成 🎊':'下一题 →'}</button>`:'';
+  return `<div class="eng-game">${head}<div class="eng-q">${q.prompt}</div><div class="eng-opts">${optsTxt}</div>${fb}${nb?('<div style="margin-top:12px">'+nb+'</div>'):''}</div>`;
+}
+function renderEnglish(){
+  const words=todayEnglishWords();
+  let h=`<div class="mod-head"><h2>🔤 英语学习</h2>
+    <div class="stats"><span>每天 4 个六级核心词</span><span class="pill">自动换新</span></div></div>
+    <p class="mute" style="margin-bottom:12px">每天自动换新词，跟着节奏慢慢积累 🌱</p>
+    <div class="eng-grid">`;
+  for(const it of words){
+    h+=`<div class="eng-card">
+      <div class="eng-w">${esc(it.w)}<button class="spk" data-act="speak" data-text="${esc(it.w)}" title="朗读单词 🔊">🔊</button></div>
+      <div class="eng-ph">${esc(it.ph)} <span class="eng-pos">${esc(it.pos)}</span></div>
+      <div class="eng-cn">${esc(it.cn)}</div>
+    </div>`;
+  }
+  h+=`</div>`;
+  h+=renderEngGame();
+  return h;
+}
+
+/* --- 2. 每日阅读 --- */
+let readIdx=-1;
+function readingIndices(){
+  return READINGS.map((r,i)=>i).filter(i=>
+    ui.readFilter==='all' ? true :
+    ui.readFilter==='TED' ? READINGS[i].src==='TED' :
+    !READINGS[i].src
+  );
+}
+function renderReading(){
+  const pool=readingIndices();
+  let r, srcLabel, statusTxt;
+  if(ui.readOnline && ui.curRead){
+    r=ui.curRead; srcLabel='🌍 在线新文'; statusTxt='🌍 在线新文';
+  }else{
+    if(readIdx<0) readIdx=dayOfYear()%READINGS.length;
+    if(!pool.includes(readIdx)) readIdx=pool[0];
+    r=READINGS[readIdx]; ui.curRead=r;
+    srcLabel=`第 ${pool.indexOf(readIdx)+1} / ${pool.length} 篇${ui.readFilter==='TED'?' · TED':ui.readFilter==='essay'?' · 美文':''}`;
+    statusTxt='离线精选';
+  }
+  const fbtn=(f,label)=>`<button class="b-chip ${ui.readFilter===f?'on':''}" data-act="readFilter" data-f="${f}">${label}</button>`;
+  let h=`<div class="mod-head"><h2>📖 每日阅读</h2>
+    <div class="stats"><span>${srcLabel}</span><span id="readStatus" class="pill">${statusTxt}</span></div></div>
+    <div class="read-top">
+      <div class="read-filters">${fbtn('all','🌐 全部')}${fbtn('TED','🎬 TED')}${fbtn('essay','📝 美文')}</div>
+      <button class="b-pink read-refresh" data-act="refreshRead">🔄 联网获取新文</button>
+    </div>
+    <p class="mute" style="margin:10px 0 12px">点上方「🔄 联网获取新文」会从真实网站（每日一文 / 古诗文 / TED / 一言）现抓一篇，每次都不同、互不重复 🌍（断网则回退离线精选）</p>
+    <div class="reader" id="reader">${readingCard(r)}</div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center">
+      <button class="b-soft" data-act="readPrev">📜 上一篇</button>
+      <button class="b-soft" data-act="readNext">下一篇 📜</button>
+    </div>`;
+  return h;
+}
+function rotateReading(dir){
+  ui.readOnline=false;
+  const pool=readingIndices();
+  let pos=pool.indexOf(readIdx);
+  if(pos<0) pos=0;
+  pos=(pos+(dir||1)+pool.length)%pool.length;
+  readIdx=pool[pos];
+  renderView();
+}
+function normalizeOnlineReading(item){
+  // 把后端现抓的文章规范化成本地卡片/测验需要的形状
+  const r = {
+    src: item.src||'在线', lang: item.lang||'zh',
+    title: item.title||'无题', author: item.author||'',
+    en: item.en||'', zh: item.zh||'', link: item.link||'',
+    note: '', words: [], id: item.id||''
+  };
+  if(r.en){
+    // 用 CET6 词典挑正文里出现过的难词，自动出"看词选义/看义选词"
+    const seen=new Set(), toks=(r.en.toLowerCase().match(/[a-z]{4,}/g)||[]);
+    for(const t of toks){
+      const cn=CET6_MAP[t];
+      if(cn && !seen.has(t)){ seen.add(t); r.words.push({word:t, cn:cn}); if(r.words.length>=4) break; }
+    }
+  }
+  return r;
+}
+async function fetchReading(manual){
+  const statusEl=document.getElementById('readStatus');
+  const kind = ui.readFilter==='TED' ? 'ted' : (ui.readFilter==='essay' ? 'essay' : 'all');
+  const url = BACKEND + '/api/reading?type=' + encodeURIComponent(kind) + '&t=' + Date.now();
+  if(statusEl) statusEl.textContent='获取中…';
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),9000);
+  try{
+    // 从后端实时抓取真实网站的文章（每日一文 / 古诗文 / TED / 一言），每次不同、互不重复
+    const res=await fetch(url,{cache:'no-store',signal:controller.signal});
+    clearTimeout(timer);
+    if(!res.ok) throw new Error('bad');
+    const data=await res.json();
+    if(!data || !data.ok) throw new Error('empty');
+    const r=normalizeOnlineReading(data);
+    ui.curRead=r; ui.lastOnlineTitle=r.title; ui.readOnline=true;
+    renderView();
+    toast('已获取在线新文 ✨');
+  }catch(e){
+    clearTimeout(timer);
+    // 离线兜底：后端不可达时回退到内置离线长文库
+    ui.readOnline=false;
+    if(readIdx<0) readIdx=dayOfYear()%READINGS.length;
+    const pool=readingIndices();
+    if(!pool.includes(readIdx)) readIdx=pool[0];
+    ui.curRead=READINGS[readIdx];
+    if(statusEl) statusEl.textContent='离线精选';
+    renderView();
+    toast('在线源暂时连不上～已显示离线长文 📖');
+  }
+}
+
+
+/* --- 5. 收支记账 --- */
+function renderFinance(){
+  const txns=DB.finance.txns;
+  const t=todayStr();
+  const tm=txns.filter(x=>x.date===t);
+  const inToday=tm.filter(x=>x.type==='income').reduce((s,x)=>s+x.amount,0);
+  const outToday=tm.filter(x=>x.type==='expense').reduce((s,x)=>s+x.amount,0);
+  const bal=txns.reduce((s,x)=>s+(x.type==='income'?x.amount:-x.amount),0);
+  const list=filt(txns).slice().reverse();
+  let h=`<div class="mod-head"><h2>💰 收支记账</h2>
+    <div class="stats"><span class="pos">今日收入 ¥${inToday}</span><span class="neg">今日支出 ¥${outToday}</span><span>结余 ¥${bal}</span></div></div>
+    ${filterBar('finance')}
+    <form class="add-form" data-act="addTxn">
+      <select name="type"><option value="expense">支出</option><option value="income">收入</option></select>
+      <input name="amount" placeholder="金额" type="number" min="0" step="0.01" required>
+      <input name="category" placeholder="分类" list="catList">
+      <datalist id="catList"><option>餐饮</option><option>交通</option><option>购物</option><option>居住</option><option>娱乐</option><option>医疗</option><option>工资</option><option>兼职</option><option>红包</option><option>投资</option><option>其他</option></datalist>
+      <input name="note" placeholder="备注">
+      <button>记一笔</button>
+    </form>
+    <div class="list">`;
+  if(list.length===0) h+='<p class="empty">还没有账单，记下第一笔吧～ 🧾</p>';
+  list.forEach(x=>{
+    h+=`<div class="item">
+      <div style="flex:1"><div class="title">${esc(x.category||'其他')} <span class="${x.type==='income'?'pos':'neg'}">${x.type==='income'?'+':'-'}¥${x.amount}</span></div>
+      <div class="meta">${esc(x.note||'')} · ${esc(x.date)}</div></div>
+      <button class="del" data-act="delTxn" data-i="${x.id}">🗑</button>
+    </div>`;
+  });
+  return h+'</div>';
+}
+
+/* --- 6. 待办计划 --- */
+function renderTodo(){
+  const tasks=DB.todo.tasks;
+  const t=todayStr();
+  const todayTasks=tasks.filter(x=>x.date===t);
+  const done=todayTasks.filter(x=>x.done).length;
+  const list=filt(tasks).slice().reverse();
+  let h=`<div class="mod-head"><h2>✅ 待办计划</h2>
+    <div class="stats"><span>今日 ${done}/${todayTasks.length} 完成</span></div></div>
+    ${filterBar('todo')}
+    <form class="add-form" data-act="addTodo">
+      <input name="text" placeholder="今天要做什么？" required>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-soft)"><input type="checkbox" name="important"> 重要</label>
+      <button>添加</button>
+    </form>
+    <div class="list">`;
+  if(list.length===0) h+='<p class="empty">列个清单，把今天安排得明明白白～ 🗒️</p>';
+  list.forEach(x=>{
+    h+=`<div class="item ${x.done?'done':''}">
+      <label class="chk"><input type="checkbox" data-act="doneTodo" data-i="${x.id}" ${x.done?'checked':''}><span class="title">${esc(x.text)}</span></label>
+      <button class="star ${x.important?'on':''}" data-act="starTodo" data-i="${x.id}" title="标记重要">${x.important?'⭐':'☆'}</button>
+      <button class="del" data-act="delTodo" data-i="${x.id}">🗑</button>
+    </div>`;
+  });
+  return h+'</div>';
+}
+
+/* --- 7. 新闻热点 --- */
+const FUN_KW=['搞笑日常','人类迷惑行为','治愈系萌宠','今天吃什么','减脂餐食谱','旅行拍照姿势','周末去哪儿','手工DIY','家居好物','穿搭灵感','宿舍改造','打工人的快乐','解压小妙招','无用但好玩','氛围感拍照','猫咪行为大赏','减肥人的嘴','一人食','生活小妙招','沉浸式回家'];
+function xhsSearchUrl(kw){ return 'https://www.xiaohongshu.com/search_result?keyword='+encodeURIComponent(kw); }
+function renderFunTags(){
+  const pick=[...FUN_KW].sort(()=>Math.random()-0.5).slice(0,8);
+  return pick.map(k=>`<a class="fun-tag" href="${xhsSearchUrl(k)}" target="_blank" rel="noopener">${esc(k)}</a>`).join('');
+}
+function funShuffle(){ const el=document.getElementById('funTags'); if(el) el.innerHTML=renderFunTags(); }
+function renderNews(){
+  let h=`<div class="mod-head"><h2>📰 新闻热点</h2>
+    <div class="stats"><span id="newsStatus" class="pill">权威媒体</span>
+      <button class="b-soft" data-act="refreshNews" style="padding:4px 12px;font-size:12px">🔄 实时刷新</button></div></div>
+    <div class="news-layout">
+      <div class="news-side">${renderNewsChips()}</div>
+      <div class="news-main" id="newsList">${renderNewsList()}</div>
+    </div>
+    <div class="fun-box">
+      <div class="fun-head">🎲 随便逛逛小红书 <span class="fun-sub">点一下直接跳 App 找乐子</span></div>
+      <div class="fun-tags" id="funTags">${renderFunTags()}</div>
+      <button class="fun-shuffle" onclick="funShuffle()">🔄 换一批</button>
+    </div>
+    <p class="news-foot">抖音 / 小红书：点一下直接唤起对应 App 打开（没装 App 则自动打开网页）；若未自动跳转，点卡片右侧 ⧉ 复制链接，粘贴到 App 搜索框即可 · 其它平台点开即看原文 · 新闻由常驻后端每 60 秒实时抓取央视/人民网/新华网/微博热搜/百度热点/抖音热点/小红书实时热榜共 7 大平台，App 每 60 秒自动拉取；后端休眠时自动回退到每小时快照</p>`;
+  setTimeout(()=>{ startNewsAuto(); fetchNews(false); },300);
+  return h;
+}
+function startNewsAuto(){
+  if(newsTimer) return;
+  newsTimer=setInterval(()=>{ if(active==='news') fetchNews(false); },60000);
+}
+async function fetchNews(manual){
+  const statusEl=document.getElementById('newsStatus');
+  const listEl=document.getElementById('newsList');
+  if(statusEl) statusEl.textContent='更新中…';
+  if(listEl) listEl.innerHTML='<p class="news-loading">正在拉取最新新闻…</p>';
+  const now=new Date();
+  const hh=String(now.getHours()).padStart(2,'0'), mm=String(now.getMinutes()).padStart(2,'0'), ss=String(now.getSeconds()).padStart(2,'0');
+  // 依次尝试：常驻后端（每60秒服务端重抓，真正实时） -> 同源 news.json（每小时自动重爬兜底）
+  const sources=['https://cute-news-backend.onrender.com/api/news','news.json?t='+Date.now()];
+  let data=null, usedBackend=false;
+  for(const url of sources){
+    try{
+      const ctrl=new AbortController();
+      const t=setTimeout(()=>ctrl.abort(),(url===sources[0]?15000:9000));
+      const res=await fetch(url,{cache:'no-store',signal:ctrl.signal});
+      clearTimeout(t);
+      if(!res.ok) throw new Error('http '+res.status);
+      const d=await res.json();
+      if(d && d.items && d.items.length){ data=d; usedBackend=(url===sources[0]); break; }
+    }catch(e){ /* 尝试下一个源 */ }
+  }
+  if(data){
+    LIVE_NEWS=(data.items||[]).filter(x=>x && x.title);
+    if(listEl) listEl.innerHTML=renderNewsList();
+    if(statusEl){
+      if(usedBackend){
+        statusEl.textContent='⚡实时后端 · 本地 '+hh+':'+mm+':'+ss;
+        statusEl.title='常驻后端实时数据：服务端每60秒自动重抓央视/人民网/新华网/微博热搜/百度热点 · 服务端数据时间：'+(data.updated||'未知');
+      }else{
+        statusEl.textContent='🕒每小时快照 · 本地 '+hh+':'+mm+':'+ss;
+        statusEl.title='后端休眠/暂时连不上，已回退到同源每小时快照 · 服务端数据时间：'+(data.updated||'未知');
+      }
+    }
+    if(manual) toast('已更新最新新闻 🌐 本地 '+hh+':'+mm+':'+ss);
+  }else{
+    LIVE_NEWS=null;
+    if(listEl) listEl.innerHTML=renderNewsList();
+    if(statusEl) statusEl.textContent='离线精选';
+    if(manual) toast('暂时连不上服务器～已显示离线新闻 📡');
+  }
+}
+
+/* --- 8. 心情相框（随手拍小相框） --- */
+function plogHashStyle(id){
+  let h=0; for(let i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))>>>0;
+  const rot=((h%13)-6);                              // -6 ~ 6 度 随机歪
+  const dx=((h>>3)%17)-8;                           // -8 ~ 8 px 水平错位
+  const mt=((h>>5)%22)-9;                           // -9 ~ 12 px 垂直错落
+  const brSet=['18px','16px 40px 16px 40px','30px 14px 30px 14px','12px 32px 12px 32px','28px 14px 28px 14px','16px 16px 46px 46px','34px'];
+  const br=brSet[(h>>2)%brSet.length];              // 随机形状，打破方正
+  const tint=['#fff5f8','#fef6ff','#f4fbff','#fffaf0','#f4fff7','#fdefff','#fff0f4'];
+  const bg=tint[h%tint.length];
+  const deco=['🎀','⭐','🌿','💗','🌸','✨','🍓','🌟','🪴','💫','🐰','🌈'];
+  const d=deco[(h>>4)%deco.length];
+  return {rot,dx,mt,br,bg,d};
+}
+function fmtDateCn(s){
+  const [Y,M,D]=s.split('-').map(Number);
+  const d=new Date(Y,M-1,D);
+  const wd=['日','一','二','三','四','五','六'][d.getDay()];
+  return `${M}月${D}日 周${wd}`;
+}
+function shiftDate(s,delta){
+  const [Y,M,D]=s.split('-').map(Number);
+  const d=new Date(Y,M-1,D); d.setDate(d.getDate()+delta);
+  return todayStr(d);
+}
+function toggleSel(id){
+  const i=ui.selIds.indexOf(id);
+  if(i>=0) ui.selIds.splice(i,1); else ui.selIds.push(id);
+  renderView();
+}
+function frameCard(p){
+  const {rot,dx,mt,br,bg,d}=plogHashStyle(p.id);
+  const sel = ui.selMode && ui.selIds.includes(p.id);
+  const hit = ui.selMode ? `<div class="frame-selhit" data-act="plogToggleSel" data-id="${p.id}"></div>` : '';
+  const photo = p.img
+    ? `<img src="${esc(p.img)}" alt="plog" loading="lazy">
+       <button class="frame-swap" data-act="plogPickImg" data-id="${p.id}" title="换图">🔄</button>`
+    : `<div class="ph"><span class="cam">📷</span><span>点我拍照</span></div>`;
+  return `<div class="frame${sel?' sel':''}" data-id="${p.id}" style="--rot:${rot}deg;--dx:${dx}px;--mt:${mt}px;--br:${br};--bg:${bg}">
+    <span class="frame-deco">${d}</span>
+    <div class="frame-photo${p.img?' viewable':''}" ${p.img?'data-act="plogView"':''} data-id="${p.id}">
+      ${photo}
+      <button class="frame-x" data-act="plogDel" data-id="${p.id}" title="删除">×</button>
+    </div>
+    <textarea class="frame-cap" data-act="plogCap" data-id="${p.id}" placeholder="写点什么…">${esc(p.text)}</textarea>
+    ${hit}
+  </div>`;
+}
+function openPhotoViewer(p){
+  const v=$('#photoViewer'); if(!v) return;
+  const img=$('#pvImg'), cap=$('#pvCap');
+  if(img){ img.src=p.img||''; }
+  if(cap){ cap.textContent=p.text||''; }
+  v.classList.add('show');
+}
+function renderCalendar(){
+  const now=new Date();
+  if(ui.calY==null){ const d=ui.viewDate? new Date(ui.viewDate+'T00:00:00'):now; ui.calY=d.getFullYear(); ui.calM=d.getMonth(); }
+  const Y=ui.calY, M=ui.calM;
+  const startDow=new Date(Y,M,1).getDay();
+  const daysInMonth=new Date(Y,M+1,0).getDate();
+  const prevDays=new Date(Y,M,0).getDate();
+  const has=new Set(DB.mood.plogs.map(p=>p.date).concat(Object.keys(DB.mood.dailyNotes||{})));
+  const tstr=todayStr();
+  const cells=[];
+  for(let i=startDow-1;i>=0;i--) cells.push({d:prevDays-i,m:M-1,y:Y,muted:true});
+  for(let d=1;d<=daysInMonth;d++) cells.push({d,m:M,y:Y,muted:false});
+  let idx=0; while(cells.length<42){ cells.push({d:idx+1,m:M+1,y:Y,muted:true}); idx++; }
+  const wd=['日','一','二','三','四','五','六'];
+  let h=`<div class="cal-head">
+      <button class="mnav" data-act="plogCalPrev" title="上个月">‹</button>
+      <div class="ttl">📔 ${Y}年${M+1}月</div>
+      <button class="mnav" data-act="plogCalNext" title="下个月">›</button>
+    </div>
+    <div class="cal-week">${wd.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="cal-grid">`;
+  for(const c of cells){
+    const yy=c.m<0?c.y-1:(c.m>11?c.y+1:c.y);
+    const mm=((c.m%12)+12)%12;
+    const ds=`${yy}-${String(mm+1).padStart(2,'0')}-${String(c.d).padStart(2,'0')}`;
+    const isT=ds===tstr, isSel=ds===ui.viewDate;
+    const cls=['calcell']; if(c.muted)cls.push('muted'); if(isT)cls.push('todaycell'); if(isSel)cls.push('selcell');
+    const dot=has.has(ds)?'<span class="dot"></span>':'';
+    h+=`<button class="${cls.join(' ')}" data-act="plogPickDate" data-date="${ds}">${c.d}${dot}</button>`;
+  }
+  h+=`</div>
+    <div class="cal-foot">
+      <button class="today" data-act="plogCalToday">📍 回到今天</button>
+      <button class="close" data-act="plogCalClose">关闭</button>
+    </div>`;
+  $('#calPop').innerHTML=h;
+}
+function renderMood(){
+  DB.mood.plogs = DB.mood.plogs || [];
+  DB.mood.dailyNotes = DB.mood.dailyNotes || {};
+  if(ui.frameSlots==null) ui.frameSlots=6;
+  if(ui.viewDate==null) ui.viewDate=todayStr();
+  const vd = ui.viewDate;
+  const isToday = vd===todayStr();
+  let h=`<div class="mod-head"><h2>🖼️ 心情相框</h2></div>
+    <p class="mood-tip">长按相框可多选删除 · 想多摆几张就点「🎀 加相框」✨</p>
+    <div class="plog-bar">
+      <button class="nav" data-act="plogPrevDay" title="前一天">‹</button>
+      <button class="cur" data-act="plogOpenCal" title="打开日历选择日期">📅 ${fmtDateCn(vd)}${isToday?' · 今天':''}</button>
+      <button class="nav" data-act="plogNextDay" title="后一天">›</button>
+      ${isToday?'':`<button class="today" data-act="plogToday">回到今天</button>`}
+    </div>
+    <div class="plog-daylabel">${isToday?'✍️ 今日手账':'✍️ 这一天的小记'}</div>
+    <textarea class="plog-daynote" data-act="plogDayNote" placeholder="给这一天写句小结吧～（比如：今天和闺蜜吃了好吃的🍰）">${esc(DB.mood.dailyNotes[vd]||'')}</textarea>`;
+  // 该天的相框
+  const frames = DB.mood.plogs.filter(p=>p.date===vd).sort((a,b)=> a.time.localeCompare(b.time));
+  h+=`<div class="frame-feed${ui.selMode?' selmode':''}">`;
+  if(frames.length===0 && !ui.selMode){
+    h+=`<div class="mood-tip" style="text-align:center;padding:10px 0">这一天还没有相框，点下面的「＋」拍下第一张吧 🌸</div>`;
+  }
+  for(const p of frames) h+=frameCard(p);
+  if(!ui.selMode){
+    for(let i=0;i<ui.frameSlots;i++) h+=`<div class="frame-add" data-act="plogAddFrame"><span class="plus">＋</span><span>加一帧</span></div>`;
+  }
+  h+=`</div>`;
+  if(!ui.selMode){
+    h+=`<div class="frame-more"><button data-act="plogAddSlots">🎀 加相框</button></div>`;
+  }
+  h+=`<input type="file" id="plogFile" accept="image/*" data-act="plogFile" hidden>`;
+  if(ui.selMode){
+    h+=`<div class="frame-selbar">
+      <button class="cancel" data-act="plogSelCancel">取消</button>
+      <button class="del" data-act="plogSelDel">🗑 删除选中 (${ui.selIds.length})</button>
+    </div>`;
+  }
+  return h;
+}
+
+/* ===================== 动作分发 ===================== */
+function findIn(arr,id){ return arr.find(x=>x.id===id); }
+function removeFrom(arr,id){ const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.splice(i,1); }
+
+function handleAct(act,el){
+  const id=el.dataset.id, i=el.dataset.i, m=el.dataset.m, v=el.dataset.val;
+  switch(act){
+    case 'checkin': doCheckin(); break;
+    case 'speak': speak(el.dataset.text, el.dataset.lang||'en-US'); break;
+    case 'toggleShow': ui.showAll[id]=!ui.showAll[id]; renderView(); break;
+    case 'clearToday': clearToday(id); break;
+    case 'delTxn': removeFrom(DB.finance.txns,i); save(); renderView(); break;
+    case 'delTodo': removeFrom(DB.todo.tasks,i); save(); renderView(); break;
+    case 'readPrev': rotateReading(-1); break;
+    case 'readNext': rotateReading(1); break;
+    case 'refreshRead': fetchReading(true); break;
+    case 'readFilter': {
+      ui.readFilter=el.dataset.f;
+      ui.readOnline=false;
+      const pool=readingIndices();
+      if(!pool.includes(readIdx)) readIdx=pool[0];
+      renderView(); break;
+    }
+    case 'readQuizStart': case 'readQuizReplay': {
+      const key=el.dataset.key;
+      const stages=buildReadStages(ui.curRead);
+      if(!stages){ toast('这篇生词太少啦～'); break; }
+      ui.readQuiz[key]={phase:'playing',stage:0,i:0,score:0,total:stages.reduce((a,s)=>a+s.length,0),stages};
+      refreshReadQuiz(); break;
+    }
+    case 'readQuizAnswer': {
+      const key=el.dataset.key, q=+el.dataset.q, opt=+el.dataset.opt;
+      const g=ui.readQuiz[key]; if(!g||g.phase!=='playing') break;
+      const qq=g.stages[g.stage][q]; if(qq.picked!==null) break;
+      qq.picked=opt; if(qq.options[opt]===qq.answer){ qq.ok=true; g.score++; } else qq.ok=false;
+      refreshReadQuiz(); break;
+    }
+    case 'readQuizNext': {
+      const key=el.dataset.key; const g=ui.readQuiz[key]; if(!g) break;
+      g.i++; if(g.i>=g.stages[g.stage].length) g.phase='stageDone';
+      refreshReadQuiz(); break;
+    }
+    case 'readQuizNextStage': {
+      const key=el.dataset.key; const g=ui.readQuiz[key]; if(!g) break;
+      g.stage++; g.i=0; g.phase='playing'; refreshReadQuiz(); break;
+    }
+    case 'readQuizFinish': {
+      const key=el.dataset.key; const g=ui.readQuiz[key]; if(!g) break;
+      g.phase='done'; refreshReadQuiz(); break;
+    }
+    case 'refreshNews': fetchNews(true); break;
+    case 'newsFilter': selectNewsFilter(el.dataset.src); break;
+    case 'playSong': loadSong(+i,true); break;
+    case 'togglePlay': togglePlay(); break;
+    case 'nextSong': playStep(1); break;
+    case 'prevSong': playStep(-1); break;
+    case 'starTodo': { const x=findIn(DB.todo.tasks,i); if(x){x.important=!x.important; save(); renderView();} break; }
+    case 'plogAddFrame': { ui.plogTargetId=null; const fi=$('#plogFile'); if(fi) fi.click(); break; }
+    case 'plogPickImg': {
+      if(ui.selMode){ toggleSel(id); break; }
+      ui.plogTargetId=id; const fi=$('#plogFile'); if(fi) fi.click(); break;
+    }
+    case 'plogView': {
+      if(ui.selMode) break;
+      const x=DB.mood.plogs.find(p=>p.id===id); if(!x||!x.img) break;
+      openPhotoViewer(x); break;
+    }
+    case 'pvClose': $('#photoViewer').classList.remove('show'); break;
+    case 'plogPrevDay': ui.viewDate=shiftDate(ui.viewDate,-1); ui.selMode=false; ui.selIds=[]; renderView(); break;
+    case 'plogNextDay': ui.viewDate=shiftDate(ui.viewDate,1); ui.selMode=false; ui.selIds=[]; renderView(); break;
+    case 'plogToday': ui.viewDate=todayStr(); ui.selMode=false; ui.selIds=[]; renderView(); break;
+    case 'plogOpenCal': renderCalendar(); $('#calMask').classList.add('show'); break;
+    case 'plogCalPrev': { ui.calM--; if(ui.calM<0){ui.calM=11;ui.calY--;} renderCalendar(); break; }
+    case 'plogCalNext': { ui.calM++; if(ui.calM>11){ui.calM=0;ui.calY++;} renderCalendar(); break; }
+    case 'plogPickDate': { ui.viewDate=el.dataset.date; ui.selMode=false; ui.selIds=[]; $('#calMask').classList.remove('show'); renderView(); break; }
+    case 'plogCalToday': { ui.viewDate=todayStr(); ui.selMode=false; ui.selIds=[]; $('#calMask').classList.remove('show'); renderView(); break; }
+    case 'plogCalClose': $('#calMask').classList.remove('show'); break;
+    case 'plogToggleSel': toggleSel(id); break;
+    case 'plogSelCancel': ui.selMode=false; ui.selIds=[]; renderView(); break;
+    case 'plogSelDel': {
+      if(ui.selIds.length===0) return;
+      if(!confirm('删除选中的 '+ui.selIds.length+' 个相框吗？')) return;
+      DB.mood.plogs=DB.mood.plogs.filter(x=>!ui.selIds.includes(x.id));
+      save(); ui.selMode=false; ui.selIds=[]; renderView(); break;
+    }
+    case 'plogAddSlots': { ui.frameSlots=(ui.frameSlots||6)+4; renderView(); break; }
+    case 'plogDel': {
+      if(!confirm('删除这一帧吗？')) return;
+      DB.mood.plogs=DB.mood.plogs.filter(x=>x.id!==id); save(); renderView(); break;
+    }
+    case 'openSettings': openSettings(); break;
+    case 'closeSettings': $('#modalMask').classList.remove('show'); break;
+    case 'engStart': case 'engReplay': {
+      ui.eng={phase:'playing', stage:0, i:0, score:0, stages:buildEngStages(todayEnglishWords())};
+      renderView(); break;
+    }
+    case 'engAnswer': {
+      const g=ui.eng; if(!g||g.phase!=='playing') break;
+      const q=g.stages[g.stage][g.i]; if(!q||q.picked!==null||q.type==='spell') break;
+      const oi=+el.dataset.i; q.picked=oi;
+      if(q.options[oi]===q.answer){ q.ok=true; g.score++; } else q.ok=false;
+      renderView(); break;
+    }
+    case 'engSpell': {
+      const g=ui.eng; if(!g||g.phase!=='playing') break;
+      const q=g.stages[g.stage][g.i]; if(!q||q.type!=='spell'||q.ok!==null) break;
+      const ti=+el.dataset.i; if(q.used.includes(ti)) break;
+      q.filled.push(q.tiles[ti]); q.used.push(ti);
+      if(q.filled.length===q.word.length){
+        if(q.filled.join('')===q.answer){ q.ok=true; g.score++; } else q.ok=false;
+      }
+      renderView(); break;
+    }
+    case 'engSpellClear': {
+      const g=ui.eng; if(!g) break;
+      const q=g.stages[g.stage] && g.stages[g.stage][g.i];
+      if(q && q.type==='spell' && q.ok===null){ q.filled=[]; q.used=[]; renderView(); }
+      break;
+    }
+    case 'engNext': {
+      const g=ui.eng; if(!g) break;
+      const qs=g.stages[g.stage]; g.i++;
+      if(g.i>=qs.length) g.phase='stageDone';
+      renderView(); break;
+    }
+    case 'engNextStage': {
+      const g=ui.eng; if(!g) break;
+      g.stage++; g.i=0; g.phase='playing'; renderView(); break;
+    }
+    case 'engFinish': {
+      const g=ui.eng; if(!g) break;
+      g.phase='done'; renderView(); break;
+    }
+    case 'exportData': exportData(); break;
+    case 'clearAll': clearAll(); break;
+  }
+}
+function handleChange(act,el){
+  const i=el.dataset.i;
+  switch(act){
+    case 'doneTodo': { const x=findIn(DB.todo.tasks,i); if(x){x.done=el.checked; save(); renderView();} break; }
+    case 'toggleDaily': { const id=el.dataset.id; DB.settings.daily[id]=el.checked; ui.showAll[id]=!el.checked; save(); break; }
+    case 'plogFile': {
+      const f=el.files && el.files[0]; if(!f) return;
+      toast('图片处理中…');
+      compressImage(f).then(dataUrl=>{
+        DB.mood.plogs = DB.mood.plogs || [];
+        if(ui.plogTargetId){ const x=DB.mood.plogs.find(p=>p.id===ui.plogTargetId); if(x) x.img=dataUrl; }
+        else { DB.mood.plogs.push({id:uid(),date:ui.viewDate||todayStr(),time:nowTime(),text:'',mood:'',img:dataUrl}); }
+        save(); ui.plogTargetId=null; renderView();
+      }).catch(()=>toast('图片读取失败，换一张试试～'));
+      el.value='';
+      break;
+    }
+    case 'plogCap': {
+      const x=DB.mood.plogs.find(p=>p.id===el.dataset.id);
+      if(x){ x.text=el.value; save(); }
+      break;
+    }
+    case 'plogDayNote': {
+      DB.mood.dailyNotes = DB.mood.dailyNotes || {};
+      DB.mood.dailyNotes[ui.viewDate||todayStr()] = el.value;
+      save();
+      break;
+    }
+  }
+}
+function handleForm(act,form){
+  const f=form;
+  switch(act){
+    case 'addTxn': {
+      DB.finance.txns.push({id:uid(),type:f.type.value,amount:+f.amount.value,category:f.category.value.trim(),note:f.note.value.trim(),date:todayStr()});
+      break; }
+    case 'addTodo': {
+      DB.todo.tasks.push({id:uid(),text:f.text.value.trim(),important:f.important.checked,done:false,date:todayStr()});
+      break; }
+  }
+  save(); form.reset(); renderView();
+}
+
+function clearToday(id){
+  if(!confirm('确定清空「'+MODULES[id].name+'」今日（'+todayStr()+'）的记录吗？\n历史数据不会受影响。')) return;
+  const t=todayStr();
+  switch(id){
+    case 'finance': DB.finance.txns=DB.finance.txns.filter(x=>x.date!==t); break;
+    case 'todo': DB.todo.tasks=DB.todo.tasks.filter(x=>x.date!==t); break;
+    case 'mood': DB.mood.plogs=DB.mood.plogs.filter(x=>x.date!==t); break;
+  }
+  save(); renderView(); toast('今日记录已清空');
+}
+
+/* ===================== 设置 / 数据 ===================== */
+function openSettings(){
+  let h=`<button class="close" data-act="closeSettings">×</button>
+    <h3>⚙️ 设置 / 数据</h3>
+    <h4>每日重置设置</h4>
+    <p style="font-size:12px;color:var(--text-soft);margin-bottom:6px">开启后，该模块默认「只看今日」，并可一键清空今日；关闭则一直累积。</p>`;
+  const DATA_MODS=['finance','todo','mood'];
+  for(const id of DATA_MODS){
+    h+=`<label class="opt">${MODULES[id].icon} ${MODULES[id].name}
+      <input type="checkbox" data-act="toggleDaily" data-id="${id}" ${DB.settings.daily[id]?'checked':''}></label>`;
+  }
+  h+=`<h4>数据管理（全部保存在本机浏览器）</h4>
+    <div class="btn-row">
+      <button class="b-soft" data-act="exportData">⬇️ 导出备份</button>
+      <button class="b-soft" id="importBtn">⬆️ 导入恢复</button>
+    </div>
+    <div class="btn-row">
+      <button class="b-red" data-act="clearAll">🗑 清空全部数据</button>
+      <button class="b-pink" data-act="closeSettings">完成</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" style="display:none">`;
+  $('#modal').innerHTML=h;
+  $('#modalMask').classList.add('show');
+  $('#importBtn').addEventListener('click',()=>$('#importFile').click());
+  $('#importFile').addEventListener('change',importData);
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='我的小天地-备份-'+todayStr()+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('已导出备份文件');
+}
+function importData(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{ const d=JSON.parse(reader.result); DB=Object.assign(defaults(),d); save(); initShowAll(); renderSidebar(); renderCheckin(); renderView(); $('#modalMask').classList.remove('show'); toast('数据已恢复 ✅'); }
+    catch(err){ toast('文件格式不正确'); }
+  };
+  reader.readAsText(file);
+}
+function clearAll(){
+  if(!confirm('⚠️ 确定清空全部数据吗？此操作不可恢复（建议先导出备份）。')) return;
+  DB=defaults(); save(); initShowAll(); ui.plogTargetId=null; ui.frameSlots=6; ui.viewDate=todayStr(); ui.selMode=false; ui.selIds=[]; ui.calY=null; ui.calM=null; renderSidebar(); renderCheckin(); renderView(); $('#modalMask').classList.remove('show'); toast('已全部清空');
+}
+
+/* ===================== 事件绑定 ===================== */
+function bindView(){
+  const view=$('#view');
+  view.addEventListener('click',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; handleAct(el.dataset.act,el); });
+  view.addEventListener('change',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; handleChange(el.dataset.act,el); });
+  view.addEventListener('submit',e=>{ const f=e.target.closest('form[data-act]'); if(!f) return; e.preventDefault(); handleForm(f.dataset.act,f); });
+  // 长按相框 → 进入多选删除模式
+  let _lpTimer=null;
+  view.addEventListener('pointerdown',e=>{
+    if(ui.selMode) return;
+    const f=e.target.closest('.frame'); if(!f) return;
+    if(e.target.closest('.frame-cap')) return;     // 输入框里不触发
+    const id=f.dataset.id; if(!id) return;
+    _lpTimer=setTimeout(()=>{
+      ui._lp=true; setTimeout(()=>{ui._lp=false;},600);
+      ui.selMode=true; ui.selIds=[id]; renderView();
+      if(navigator.vibrate){ try{navigator.vibrate(30);}catch(_){} }
+    },500);
+  });
+  const _lpClear=()=>{ if(_lpTimer){clearTimeout(_lpTimer);_lpTimer=null;} };
+  view.addEventListener('pointermove',_lpClear);
+  view.addEventListener('pointerup',_lpClear);
+  view.addEventListener('pointercancel',_lpClear);
+  view.addEventListener('click',e=>{ if(ui._lp){ e.stopPropagation(); e.preventDefault(); ui._lp=false; } }, true);
+  view.addEventListener('contextmenu',e=>{ if(e.target.closest('.frame')) e.preventDefault(); });
+}
+function bindGlobal(){
+  $('#gearBtn').addEventListener('click',openSettings);
+  const gt=$('#gearTop'); if(gt) gt.addEventListener('click',openSettings);
+  $('#checkinBtn').addEventListener('click',doCheckin);
+  // 设置弹窗内的按钮也在 #view 之外，需单独委托
+  const mask=$('#modalMask');
+  mask.addEventListener('click',e=>{
+    if(e.target===$('#modalMask')){ mask.classList.remove('show'); return; }
+    const el=e.target.closest('[data-act]'); if(!el) return; handleAct(el.dataset.act,el);
+  });
+  mask.addEventListener('change',e=>{ const el=e.target.closest('[data-act]'); if(!el) return; handleChange(el.dataset.act,el); });
+  const cal=$('#calMask');
+  cal.addEventListener('click',e=>{
+    if(e.target===$('#calMask')){ cal.classList.remove('show'); return; }
+    const el=e.target.closest('[data-act]'); if(!el) return; handleAct(el.dataset.act,el);
+  });
+  // 心情相框 · 查看大图弹层：点空白处关闭
+  const pv=$('#photoViewer');
+  if(pv){
+    pv.addEventListener('click',e=>{
+      if(e.target===$('#photoViewer')){ $('#photoViewer').classList.remove('show'); return; }
+      const el=e.target.closest('[data-act]'); if(!el) return; handleAct(el.dataset.act,el);
+    });
+  }
+}
+
+/* ===================== 启动 ===================== */
+function init(){
+  initShowAll();
+  renderSidebar(); bindSidebar();
+  bindView(); bindGlobal();
+  setupAudio();
+  renderClock(); renderCheckin(); renderQuote(); renderView();
+  setInterval(renderClock,1000);
+  // 云端同步：启动即拉取最新，之后每 45 秒自动双向同步
+  injectSyncBadge();
+  pullSync(true).then(()=>pushSync());
+  setInterval(()=>{ pullSync(true).then(()=>pushSync()); }, 45000);
+}
+function setupAudio(){
+  const a=document.getElementById('player');
+  player.audio=a;
+  a.addEventListener('timeupdate',()=>{
+    const r=$('#npRange'); if(r&&a.duration) r.value=Math.floor(a.currentTime/a.duration*100);
+    const c=$('#npCur'); if(c) c.textContent=fmtTime(a.currentTime);
+    syncLyrics(a.currentTime);
+  });
+  a.addEventListener('loadedmetadata',()=>{ const d=$('#npDur'); if(d) d.textContent=fmtTime(a.duration); });
+  a.addEventListener('play',updateNowPlaying);
+  a.addEventListener('pause',updateNowPlaying);
+  a.addEventListener('ended',()=>playStep(1));
+  a.addEventListener('error',()=>toast('播放失败，换个网络再试～'));
+}
+init();
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
+</script>
+</body>
+</html>
