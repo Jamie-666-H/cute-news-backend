@@ -1729,14 +1729,14 @@ async function fetchNews(manual){
 function plogHashStyle(id){
   let h=0; for(let i=0;i<id.length;i++) h=(h*31+id.charCodeAt(i))>>>0;
   const rot=((h%13)-6);                              // -6 ~ 6 度 随机歪
-  const dx=((h>>3)%17)-8;                           // -8 ~ 8 px 水平错位
-  const mt=((h>>5)%22)-9;                           // -9 ~ 12 px 垂直错落
+  const dx=((h>>>3)%17)-8;                          // -8 ~ 8 px 水平错位
+  const mt=((h>>>5)%22)-9;                          // -9 ~ 12 px 垂直错落
   const brSet=['18px','16px 40px 16px 40px','30px 14px 30px 14px','12px 32px 12px 32px','28px 14px 28px 14px','16px 16px 46px 46px','34px'];
-  const br=brSet[(h>>2)%brSet.length];              // 随机形状，打破方正
+  const br=brSet[(h>>>2)%brSet.length];             // 随机形状，打破方正
   const tint=['#fff5f8','#fef6ff','#f4fbff','#fffaf0','#f4fff7','#fdefff','#fff0f4'];
   const bg=tint[h%tint.length];
   const deco=['🎀','⭐','🌿','💗','🌸','✨','🍓','🌟','🪴','💫','🐰','🌈'];
-  const d=deco[(h>>4)%deco.length];
+  const d=deco[(h>>>4)%deco.length];
   return {rot,dx,mt,br,bg,d};
 }
 function fmtDateCn(s){
@@ -1764,7 +1764,7 @@ function frameCard(p){
        <button class="frame-swap" data-act="plogPickImg" data-id="${p.id}" title="换图">🔄</button>`
     : `<div class="ph"><span class="cam">📷</span><span>点我拍照</span></div>`;
   return `<div class="frame${sel?' sel':''}" data-id="${p.id}" style="--rot:${rot}deg;--dx:${dx}px;--mt:${mt}px;--br:${br};--bg:${bg}">
-    <span class="frame-deco">${d}</span>
+    <span class="frame-deco">${d||'✨'}</span>
     <div class="frame-photo${p.img?' viewable':''}" ${p.img?'data-act="plogView"':''} data-id="${p.id}">
       ${photo}
       <button class="frame-x" data-act="plogDel" data-id="${p.id}" title="删除">×</button>
