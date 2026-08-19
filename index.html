@@ -83,22 +83,13 @@
   .topbar{
     display:flex;align-items:center;justify-content:space-between;
     padding:18px 26px;gap:18px;
-    background:rgba(255,255,255,.6);
+    background:linear-gradient(135deg,rgba(255,182,206,.55),rgba(255,224,236,.45));
     border-bottom:2px solid var(--line);
   }
-  .clock-box{display:flex;flex-direction:column}
-  .clock{font-size:38px;font-weight:800;color:var(--pink-deep);line-height:1;font-variant-numeric:tabular-nums}
-  .date{font-size:13px;color:var(--text-soft);margin-top:6px}
-  .checkin-box{display:flex;align-items:center;gap:14px}
-  .checkin-btn{
-    border:none;border-radius:16px;padding:12px 22px;
-    background:linear-gradient(135deg,var(--pink),var(--pink-deep));
-    color:#fff;font-size:15px;font-weight:700;cursor:pointer;
-    box-shadow:var(--shadow);transition:transform .15s;
-  }
-  .checkin-btn:hover{transform:scale(1.04)}
-  .checkin-btn.done{background:#cdebd2;color:#3f9c5a;box-shadow:none}
-  .streak{font-size:13px;color:var(--text-soft);font-weight:600}
+  .clock-box{display:flex;flex-direction:column;gap:3px}
+  .greeting{font-size:15px;font-weight:800;color:var(--pink-deep);display:flex;align-items:center;gap:6px}
+  .clock{font-size:34px;font-weight:800;color:var(--pink-deep);line-height:1.1;font-variant-numeric:tabular-nums;letter-spacing:1px}
+  .date{font-size:13px;color:var(--text-soft);margin-top:2px}
   .quote-box{
     margin:0 26px;margin-top:16px;
     background:rgba(255,255,255,.7);
@@ -479,12 +470,9 @@
   <main class="main">
     <div class="topbar">
       <div class="clock-box">
+        <div class="greeting" id="greeting">嗨，今天也要开心呀 🌸</div>
         <div class="clock" id="clock">00:00:00</div>
         <div class="date" id="date">—</div>
-      </div>
-      <div class="checkin-box">
-        <div class="streak" id="streak">已连续打卡 0 天</div>
-        <button class="checkin-btn" id="checkinBtn" data-act="checkin">今日打卡</button>
       </div>
       <button class="gear-top" id="gearTop" title="设置 / 数据">⚙️</button>
     </div>
@@ -562,7 +550,6 @@ function defaults(){
   return {
     navOrder:order.slice(),
     newsOrder:['央视新闻','新华网','人民网','微博热搜','百度热点','抖音热点','小红书热点','热门'],
-    checkin:{dates:[]},
     settings:{daily},
     english:{words:[]},
     reading:{books:[],logs:[]},
@@ -647,7 +634,7 @@ async function pullSync(silent){
         DB.updated=Math.max(lu,ru);
         save();
         _suppressPush=false;
-        initShowAll(); renderSidebar(); renderCheckin(); renderView();
+        initShowAll(); renderSidebar(); renderView();
         setSync('ok');
         if(!silent) toast('已从云端同步最新数据 ☁️');
         return true;
@@ -1245,29 +1232,17 @@ function renderClock(){
   const n=new Date();
   $('#clock').textContent=n.toLocaleTimeString('zh-CN',{hour12:false});
   $('#date').textContent=n.toLocaleDateString('zh-CN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  renderGreeting();
 }
-function calcStreak(){
-  const set=new Set(DB.checkin.dates);
-  let d=new Date();
-  if(!set.has(todayStr(d))) d.setDate(d.getDate()-1);
-  let s=0;
-  while(set.has(todayStr(d))){ s++; d.setDate(d.getDate()-1); }
-  return s;
-}
-function renderCheckin(){
-  const t=todayStr();
-  const done=DB.checkin.dates.includes(t);
-  const btn=$('#checkinBtn');
-  btn.textContent=done?'今日已打卡 ✓':'今日打卡';
-  btn.classList.toggle('done',done);
-  $('#streak').textContent=`已连续打卡 ${calcStreak()} 天`;
-}
-function doCheckin(){
-  const t=todayStr();
-  const i=DB.checkin.dates.indexOf(t);
-  if(i>=0){ DB.checkin.dates.splice(i,1); toast('已取消今日打卡'); }
-  else{ DB.checkin.dates.push(t); toast('打卡成功，加油！🌟'); }
-  save(); renderCheckin();
+function renderGreeting(){
+  const h=new Date().getHours();
+  const g = h<5?'夜深了，早点休息哦 🌙'
+         : h<11?'早上好呀，元气满满 ☀️'
+         : h<13?'中午好，记得好好吃饭 🍚'
+         : h<18?'下午好，继续加油呀 🌸'
+         : h<22?'晚上好，今天辛苦啦 🌇'
+         : '夜深了，早点休息哦 🌙';
+  $('#greeting').textContent=g;
 }
 function renderQuote(){
   const q=QUOTES[dayOfYear()%QUOTES.length];
@@ -1865,7 +1840,6 @@ function removeFrom(arr,id){ const i=arr.findIndex(x=>x.id===id); if(i>=0) arr.s
 function handleAct(act,el){
   const id=el.dataset.id, i=el.dataset.i, m=el.dataset.m, v=el.dataset.val;
   switch(act){
-    case 'checkin': doCheckin(); break;
     case 'speak': speak(el.dataset.text, el.dataset.lang||'en-US'); break;
     case 'toggleShow': ui.showAll[id]=!ui.showAll[id]; renderView(); break;
     case 'clearToday': clearToday(id); break;
@@ -2087,14 +2061,14 @@ function importData(e){
   const file=e.target.files[0]; if(!file) return;
   const reader=new FileReader();
   reader.onload=()=>{
-    try{ const d=JSON.parse(reader.result); DB=Object.assign(defaults(),d); save(); initShowAll(); renderSidebar(); renderCheckin(); renderView(); $('#modalMask').classList.remove('show'); toast('数据已恢复 ✅'); }
+    try{ const d=JSON.parse(reader.result); DB=Object.assign(defaults(),d); save(); initShowAll(); renderSidebar(); renderView(); $('#modalMask').classList.remove('show'); toast('数据已恢复 ✅'); }
     catch(err){ toast('文件格式不正确'); }
   };
   reader.readAsText(file);
 }
 function clearAll(){
   if(!confirm('⚠️ 确定清空全部数据吗？此操作不可恢复（建议先导出备份）。')) return;
-  DB=defaults(); save(); initShowAll(); ui.plogTargetId=null; ui.frameSlots=6; ui.viewDate=todayStr(); ui.selMode=false; ui.selIds=[]; ui.calY=null; ui.calM=null; renderSidebar(); renderCheckin(); renderView(); $('#modalMask').classList.remove('show'); toast('已全部清空');
+  DB=defaults(); save(); initShowAll(); ui.plogTargetId=null; ui.frameSlots=6; ui.viewDate=todayStr(); ui.selMode=false; ui.selIds=[]; ui.calY=null; ui.calM=null; renderSidebar(); renderView(); $('#modalMask').classList.remove('show'); toast('已全部清空');
 }
 
 /* ===================== 事件绑定 ===================== */
@@ -2126,7 +2100,6 @@ function bindView(){
 function bindGlobal(){
   $('#gearBtn').addEventListener('click',openSettings);
   const gt=$('#gearTop'); if(gt) gt.addEventListener('click',openSettings);
-  $('#checkinBtn').addEventListener('click',doCheckin);
   // 设置弹窗内的按钮也在 #view 之外，需单独委托
   const mask=$('#modalMask');
   mask.addEventListener('click',e=>{
@@ -2155,7 +2128,7 @@ async function init(){
   renderSidebar(); bindSidebar();
   bindView(); bindGlobal();
   setupAudio();
-  renderClock(); renderCheckin(); renderQuote();
+  renderClock(); renderQuote();
   try{ await loadIdb(); }catch(e){}
   renderView();
   setInterval(renderClock,1000);
