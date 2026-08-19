@@ -94,6 +94,21 @@
   .top-pill{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:14px;background:var(--pink-soft);color:var(--pink-deep);font-size:13px;font-weight:700;white-space:nowrap}
   .top-pill .em{font-size:15px;line-height:1}
   .top-pill .v{font-variant-numeric:tabular-nums}
+  /* 顶栏天气卡片：柔和粉、轻浮动，可爱但不抢眼 */
+  .weather-chip{
+    display:flex;align-items:center;gap:9px;
+    padding:9px 15px;border-radius:18px;cursor:pointer;user-select:none;
+    background:var(--pink-soft);border:1.5px solid rgba(255,170,200,.45);
+    box-shadow:0 4px 14px rgba(255,140,180,.15);
+    transition:transform .15s;white-space:nowrap;
+  }
+  .weather-chip:hover{transform:translateY(-2px)}
+  .weather-emoji{font-size:28px;line-height:1;animation:wxfloat 3.2s ease-in-out infinite}
+  .weather-info{display:flex;flex-direction:column;line-height:1.12}
+  .weather-temp{font-size:21px;font-weight:800;color:var(--pink-deep);font-variant-numeric:tabular-nums}
+  .weather-city{font-size:11px;color:var(--text-soft);margin-top:2px}
+  .weather-loading{font-size:13px;font-weight:700;color:var(--pink-deep);opacity:.85}
+  @keyframes wxfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
   .quote-box{
     margin:0 26px;margin-top:16px;
     background:rgba(255,255,255,.7);
@@ -480,6 +495,7 @@
         <div class="clock" id="clock">00:00:00</div>
         <div class="date" id="date">—</div>
       </div>
+      <div class="weather-chip" id="weatherChip" title="点一下开启定位看天气">📍 点我开启天气</div>
       <div class="top-stats" id="topStats"></div>
       <button class="gear-top" id="gearTop" title="设置 / 数据">⚙️</button>
     </div>
@@ -1266,6 +1282,47 @@ function renderTopStats(){
     '<div class="top-pill"><span class="em">📝</span><span>待办 '+todoRemain+'</span></div>'+
     '<div class="top-pill"><span class="em">💰</span><span class="v">'+expTxt+'</span></div>'+
     '<div class="top-pill"><span class="em">🖼️</span><span>'+(frames>0?('今日 '+frames+' 张'):'拍一张')+'</span></div>';
+}
+/* ===================== 顶栏天气（按定位） ===================== */
+let _wxPos=null;        // 已获得的经纬度 {lat,lon}
+let _wxTimer=null;
+function initWeather(){
+  const chip=$('#weatherChip'); if(!chip) return;
+  if(!('geolocation' in navigator)){
+    chip.innerHTML='<span class="weather-loading">设备不支持定位</span>';
+    return;
+  }
+  chip.innerHTML='<span class="weather-loading">📍 定位中…</span>';
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      _wxPos={lat:pos.coords.latitude, lon:pos.coords.longitude};
+      renderWeather();
+      if(!_wxTimer) _wxTimer=setInterval(renderWeather,600000); // 每 10 分钟刷新
+    },
+    err=>{
+      const msg = err && err.code===1 ? '点我允许定位 🌤️' : '点我开启天气 🌤️';
+      chip.innerHTML='<span class="weather-loading">'+msg+'</span>';
+    },
+    {enableHighAccuracy:false, timeout:8000, maximumAge:600000}
+  );
+}
+function renderWeather(){
+  const chip=$('#weatherChip'); if(!chip) return;
+  if(!_wxPos){ initWeather(); return; }
+  fetch(BACKEND+'/api/weather?lat='+_wxPos.lat+'&lon='+_wxPos.lon)
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d || !d.ok || d.temp==null){
+        chip.innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>';
+        return;
+      }
+      const temp=Math.round(d.temp);
+      const city=d.city ? ('<span class="weather-city">'+esc(d.city)+'</span>') : '';
+      chip.innerHTML='<span class="weather-emoji">'+d.emoji+'</span>'+
+        '<span class="weather-info"><span class="weather-temp">'+temp+'°</span>'+city+'</span>';
+      chip.title=(d.city?d.city+' · ':'')+d.desc;
+    })
+    .catch(()=>{ chip.innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>'; });
 }
 function renderQuote(){
   const q=QUOTES[dayOfYear()%QUOTES.length];
@@ -2123,6 +2180,7 @@ function bindView(){
 function bindGlobal(){
   $('#gearBtn').addEventListener('click',openSettings);
   const gt=$('#gearTop'); if(gt) gt.addEventListener('click',openSettings);
+  const wx=$('#weatherChip'); if(wx) wx.addEventListener('click',initWeather); // 点一下重新请求定位/刷新天气
   // 设置弹窗内的按钮也在 #view 之外，需单独委托
   const mask=$('#modalMask');
   mask.addEventListener('click',e=>{
@@ -2152,6 +2210,7 @@ async function init(){
   bindView(); bindGlobal();
   setupAudio();
   renderClock(); renderQuote();
+  initWeather();
   try{ await loadIdb(); }catch(e){}
   renderView();
   setInterval(renderClock,1000);

@@ -1,5 +1,5 @@
 /* 我的小天地 - 离线缓存 Service Worker */
-const CACHE = 'cute-workbench-v47';
+const CACHE = 'cute-workbench-v48';
 const ASSETS = [
   './',
   './index.html',
