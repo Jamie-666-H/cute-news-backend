@@ -94,25 +94,18 @@
   .top-pill{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:14px;background:var(--pink-soft);color:var(--pink-deep);font-size:13px;font-weight:700;white-space:nowrap}
   .top-pill .em{font-size:15px;line-height:1}
   .top-pill .v{font-variant-numeric:tabular-nums}
-  /* 顶栏天气卡片：云朵☁️造型，纯白+柔和粉晕，可爱不抢眼 */
+  /* 顶栏天气卡片：真正的云朵☁️ SVG 轮廓（白填充+淡粉描边+贴合阴影），可爱清晰 */
   .weather-chip{
     position:relative;
     display:inline-flex;align-items:center;gap:9px;
-    padding:12px 18px 16px;margin:7px 6px 14px;cursor:pointer;user-select:none;
-    background:#fff;border-radius:24px;
-    box-shadow:0 8px 18px rgba(255,150,185,.28);
+    padding:14px 24px 16px;margin:6px 6px 12px;cursor:pointer;user-select:none;
     transition:transform .15s;white-space:nowrap;
-    animation:cloudfloat 4s ease-in-out infinite;
+    animation:cloudfloat 4.5s ease-in-out infinite;
   }
   .weather-chip:hover{animation:none;transform:translateY(-3px)}
-  /* 云朵下缘的两个鼓包（纯白融合，无描边，营造☁️轮廓） */
-  .weather-chip::before,
-  .weather-chip::after{
-    content:'';position:absolute;bottom:0;background:#fff;border-radius:50%;
-    box-shadow:0 6px 12px rgba(255,150,185,.18);
-  }
-  .weather-chip::before{left:16px;width:34px;height:28px;transform:translateY(38%)}
-  .weather-chip::after{right:20px;width:24px;height:20px;transform:translateY(44%)}
+  .cloud-bg{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+    filter:drop-shadow(0 7px 13px rgba(255,150,185,.32))}
+  .weather-inner{position:relative;z-index:1;display:inline-flex;align-items:center;gap:9px}
   .weather-emoji{font-size:28px;line-height:1;animation:wxfloat 3.2s ease-in-out infinite}
   .weather-info{display:flex;flex-direction:column;line-height:1.12}
   .weather-temp{font-size:21px;font-weight:800;color:var(--pink-deep);font-variant-numeric:tabular-nums}
@@ -428,9 +421,7 @@
     .top-stats{flex-basis:100%;justify-content:center;order:3;margin-top:6px;gap:8px}
     .top-pill{padding:7px 12px;font-size:12px}
     .clock{font-size:30px}
-    .weather-chip{margin:4px 4px 12px;padding:11px 15px 14px}
-    .weather-chip::before{left:13px;width:28px;height:23px}
-    .weather-chip::after{right:16px;width:20px;height:16px}
+    .weather-chip{margin:4px 4px 10px;padding:11px 18px 13px}
     .quote-box{margin:12px 14px 0;padding:12px 16px}
     .view-wrap{overflow:visible;padding:16px 14px 24px}
     .cet6{grid-template-columns:1fr}
@@ -509,7 +500,12 @@
         <div class="clock" id="clock">00:00:00</div>
         <div class="date" id="date">—</div>
       </div>
-      <div class="weather-chip" id="weatherChip" title="点一下开启定位看天气">📍 点我开启天气</div>
+      <div class="weather-chip" id="weatherChip" title="点一下开启定位看天气">
+        <svg class="cloud-bg" viewBox="0 0 24 24" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z" fill="#ffffff" stroke="#ffc2dd" stroke-width="1.3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <span class="weather-inner">📍 点我开启天气</span>
+      </div>
       <div class="top-stats" id="topStats"></div>
       <button class="gear-top" id="gearTop" title="设置 / 数据">⚙️</button>
     </div>
@@ -1303,10 +1299,10 @@ let _wxTimer=null;
 function initWeather(){
   const chip=$('#weatherChip'); if(!chip) return;
   if(!('geolocation' in navigator)){
-    chip.innerHTML='<span class="weather-loading">设备不支持定位</span>';
+    chip.querySelector('.weather-inner').innerHTML='<span class="weather-loading">设备不支持定位</span>';
     return;
   }
-  chip.innerHTML='<span class="weather-loading">📍 定位中…</span>';
+  chip.querySelector('.weather-inner').innerHTML='<span class="weather-loading">📍 定位中…</span>';
   navigator.geolocation.getCurrentPosition(
     pos=>{
       _wxPos={lat:pos.coords.latitude, lon:pos.coords.longitude};
@@ -1315,7 +1311,7 @@ function initWeather(){
     },
     err=>{
       const msg = err && err.code===1 ? '点我允许定位 🌤️' : '点我开启天气 🌤️';
-      chip.innerHTML='<span class="weather-loading">'+msg+'</span>';
+      chip.querySelector('.weather-inner').innerHTML='<span class="weather-loading">'+msg+'</span>';
     },
     {enableHighAccuracy:false, timeout:8000, maximumAge:600000}
   );
@@ -1327,7 +1323,7 @@ function renderWeather(){
     .then(r=>r.json())
     .then(d=>{
       if(!d || !d.ok || d.temp==null){
-        chip.innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>';
+        chip.querySelector('.weather-inner').innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>';
         return;
       }
       chip._temp=Math.round(d.temp); chip._emoji=d.emoji; chip._desc=d.desc;
@@ -1345,12 +1341,12 @@ function renderWeather(){
         })
         .catch(()=>{});   // 城市失败不影响天气显示
     })
-    .catch(()=>{ chip.innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>'; });
+    .catch(()=>{ chip.querySelector('.weather-inner').innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>'; });
 }
 function paintWeather(chip){
   if(chip._temp==null) return;
   const city=chip._city?('<span class="weather-city">'+esc(chip._city)+'</span>'):'';
-  chip.innerHTML='<span class="weather-emoji">'+chip._emoji+'</span>'+
+  chip.querySelector('.weather-inner').innerHTML='<span class="weather-emoji">'+chip._emoji+'</span>'+
     '<span class="weather-info"><span class="weather-temp">'+chip._temp+'°</span>'+city+'</span>';
   chip.title=(chip._city?chip._city+' · ':'')+chip._desc;
 }
