@@ -1316,13 +1316,22 @@ function renderWeather(){
         chip.innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>';
         return;
       }
-      const temp=Math.round(d.temp);
-      const city=d.city ? ('<span class="weather-city">'+esc(d.city)+'</span>') : '';
-      chip.innerHTML='<span class="weather-emoji">'+d.emoji+'</span>'+
-        '<span class="weather-info"><span class="weather-temp">'+temp+'°</span>'+city+'</span>';
-      chip.title=(d.city?d.city+' · ':'')+d.desc;
+      chip._temp=Math.round(d.temp); chip._emoji=d.emoji; chip._desc=d.desc;
+      paintWeather(chip);  // 先画天气，城市名异步补
+      // 城市名：前端用 BigDataCloud 反向地理编码（CORS，手机可直连；后端美国节点连不通）
+      fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+_wxPos.lat+'&longitude='+_wxPos.lon+'&localityLanguage=zh')
+        .then(r=>r.json())
+        .then(g=>{ const c=g.city||g.locality||g.principalSubdivision||''; if(c){ chip._city=c; paintWeather(chip); } })
+        .catch(()=>{});   // 城市失败不影响天气显示
     })
     .catch(()=>{ chip.innerHTML='<span class="weather-loading">🌧️ 天气获取失败</span>'; });
+}
+function paintWeather(chip){
+  if(chip._temp==null) return;
+  const city=chip._city?('<span class="weather-city">'+esc(chip._city)+'</span>'):'';
+  chip.innerHTML='<span class="weather-emoji">'+chip._emoji+'</span>'+
+    '<span class="weather-info"><span class="weather-temp">'+chip._temp+'°</span>'+city+'</span>';
+  chip.title=(chip._city?chip._city+' · ':'')+chip._desc;
 }
 function renderQuote(){
   const q=QUOTES[dayOfYear()%QUOTES.length];

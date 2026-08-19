@@ -330,15 +330,8 @@ def get_weather(lat, lon):
         code = int(cur.get('weather_code', 0))
         temp = cur.get('temperature_2m')
         emoji, desc = WMO.get(code, ('🌡️', '未知'))
-        city = ''
-        try:
-            gurl = ('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f'
-                    '&longitude=%.4f&localityLanguage=zh' % (lat, lon))
-            gj = json.loads(_http_text(gurl, 8))
-            city = gj.get('city') or gj.get('locality') or gj.get('principalSubdivision') or ''
-        except Exception:
-            city = ''
-        result = {'ok': True, 'temp': temp, 'code': code, 'emoji': emoji, 'desc': desc, 'city': city}
+        # 城市名改由前端用 BigDataCloud 的 CORS 接口按经纬度反查（Render 美国节点连不通该服务）
+        result = {'ok': True, 'temp': temp, 'code': code, 'emoji': emoji, 'desc': desc}
     except Exception as e:
         result = {'ok': False, 'error': str(e)[:80]}
     with WEATHER_CACHE_LOCK:
