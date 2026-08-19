@@ -295,6 +295,57 @@ def get_reading(kind):
     return last  # 全部都撞上最近重复时，仍返回一篇，保证不空
 
 
+# ---------- 实时天气（按定位经纬度，后端代抓，前端走同源调用，避开 CORS） ----------
+# 浏览器直连 open-meteo 在国内手机网络不稳定且可能受 CORS 限制；由后端（Render 美国节点）
+# 代抓 open-meteo 实时天气 + BigDataCloud 反向地理编码，再同源吐给前端。带 10 分钟网格缓存。
+WEATHER_CACHE = {}
+WEATHER_CACHE_LOCK = threading.Lock()
+WEATHER_TTL = 600  # 10 分钟
+
+WMO = {
+    0: ('☀️', '晴'), 1: ('🌤️', '晴间多云'), 2: ('⛅', '多云'), 3: ('☁️', '阴'),
+    45: ('🌫️', '雾'), 48: ('🌫️', '雾'),
+    51: ('🌦️', '毛毛雨'), 53: ('🌦️', '毛毛雨'), 55: ('🌦️', '毛毛雨'),
+    56: ('🌧️', '冻雨'), 57: ('🌧️', '冻雨'),
+    61: ('🌧️', '小雨'), 63: ('🌧️', '中雨'), 65: ('🌧️', '大雨'),
+    66: ('🌨️', '冻雨'), 67: ('🌨️', '冻雨'),
+    71: ('🌨️', '小雪'), 73: ('🌨️', '中雪'), 75: ('🌨️', '大雪'), 77: ('🌨️', '雪粒'),
+    80: ('🌦️', '阵雨'), 81: ('🌦️', '阵雨'), 82: ('🌦️', '强阵雨'),
+    85: ('🌨️', '阵雪'), 86: ('🌨️', '阵雪'),
+    95: ('⛈️', '雷阵雨'), 96: ('⛈️', '雷阵雨'), 99: ('⛈️', '雷阵雨'),
+}
+
+def get_weather(lat, lon):
+    key = (round(lat, 1), round(lon, 1))  # 0.1 度网格，避免同一城市频繁请求
+    now = time.time()
+    with WEATHER_CACHE_LOCK:
+        c = WEATHER_CACHE.get(key)
+        if c and now - c[0] < WEATHER_TTL:
+            return c[1]
+    try:
+        wurl = ('https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f'
+                '&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto' % (lat, lon))
+        wj = json.loads(_http_text(wurl, 10))
+        cur = wj.get('current', {})
+        code = int(cur.get('weather_code', 0))
+        temp = cur.get('temperature_2m')
+        emoji, desc = WMO.get(code, ('🌡️', '未知'))
+        city = ''
+        try:
+            gurl = ('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=%.4f'
+                    '&longitude=%.4f&localityLanguage=zh' % (lat, lon))
+            gj = json.loads(_http_text(gurl, 8))
+            city = gj.get('city') or gj.get('locality') or gj.get('principalSubdivision') or ''
+        except Exception:
+            city = ''
+        result = {'ok': True, 'temp': temp, 'code': code, 'emoji': emoji, 'desc': desc, 'city': city}
+    except Exception as e:
+        result = {'ok': False, 'error': str(e)[:80]}
+    with WEATHER_CACHE_LOCK:
+        WEATHER_CACHE[key] = (now, result)
+    return result
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **k):
         super().__init__(*a, directory=ROOT, **k)
@@ -346,6 +397,16 @@ class Handler(SimpleHTTPRequestHandler):
                 self._send_json(200, {'ok': True, **item})
             else:
                 self._send_json(200, {'ok': False, 'error': 'no_source'})
+            return
+        if p in ('/api/weather', '/api/weather/'):
+            qs = parse_qs(urlparse(self.path).query)
+            try:
+                lat = float(qs.get('lat', [''])[0])
+                lon = float(qs.get('lon', [''])[0])
+            except (ValueError, IndexError):
+                self._send_json(400, {'ok': False, 'error': 'missing lat/lon'})
+                return
+            self._send_json(200, get_weather(lat, lon))
             return
         return super().do_GET()
 
