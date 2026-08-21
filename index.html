@@ -577,7 +577,7 @@ const $ = s => document.querySelector(s);
 const KEY = 'cute-workbench-v1';
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 /* 云端同步配置（与新闻后端同一服务） */
-const BACKEND = 'https://cute-news-backend.onrender.com';
+const BACKEND = location.origin;   // 同源：在 Netlify / 任意托管上都自动适配
 const SYNC_KEY = 'cute-workbench-sync-v1';
 function todayStr(d=new Date()){
   const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
@@ -2051,7 +2051,7 @@ async function fetchNews(manual){
   const now=new Date();
   const hh=String(now.getHours()).padStart(2,'0'), mm=String(now.getMinutes()).padStart(2,'0'), ss=String(now.getSeconds()).padStart(2,'0');
   // 依次尝试：常驻后端（每60秒服务端重抓，真正实时） -> 同源 news.json（每小时自动重爬兜底）
-  const sources=['https://cute-news-backend.onrender.com/api/news','news.json?t='+Date.now()];
+  const sources=[BACKEND+'/api/news','news.json?t='+Date.now()];
   let data=null, usedBackend=false;
   for(const url of sources){
     try{
