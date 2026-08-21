@@ -16,6 +16,15 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 import urllib.request, urllib.parse as _uparse, urllib.error, base64
 
+try:
+    from pywebpush import webpush, WebPushException
+    HAVE_WEBPUSH = True
+except Exception:
+    class WebPushException(Exception):
+        pass
+    webpush = None
+    HAVE_WEBPUSH = False
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from crawl_news import crawl
 
@@ -90,6 +99,113 @@ def _gh_put(store):
             return False
     return False
 
+
+# ---------- Web Push 每日提醒（固定事项到点自动弹系统通知，不用打开 App） ----------
+# 依赖 pywebpush（见 requirements.txt）。VAPID 私钥优先读环境变量 VAPID_PRIVATE，
+# 未配置时回退到内置硬编码密钥（与前端 VAPID_PUBLIC 配套）。
+VAPID_PRIVATE = os.environ.get('VAPID_PRIVATE', 'VxW2gdyFJF3bQ78B7PgVLSoSdriLRiI5wiDyEcYB-7Q')
+VAPID_SUBJECT = 'mailto:cute-workbench@example.com'
+PUSH_FILE = os.path.join(ROOT, 'push_subs.json')
+push_subs = {}          # device -> {subscription, schedule, updated}
+push_lock = threading.Lock()
+sent_markers = {}       # (date, itemId) -> True，防止同一事项一分钟内重复推送
+sent_lock = threading.Lock()
+
+def _aud(sub):
+    ep = (sub or {}).get('endpoint', '')
+    try:
+        u = urlparse(ep)
+        return '%s://%s' % (u.scheme, u.netloc)
+    except Exception:
+        return 'https://fcm.googleapis.com'
+
+def load_push():
+    global push_subs
+    try:
+        if os.path.exists(PUSH_FILE):
+            with open(PUSH_FILE, 'r', encoding='utf-8') as f:
+                push_subs = json.load(f)
+    except Exception:
+        push_subs = {}
+
+def save_push():
+    try:
+        with open(PUSH_FILE, 'w', encoding='utf-8') as f:
+            json.dump(push_subs, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+def send_push(sub, title, body, url='/'):
+    if not webpush:
+        return False
+    try:
+        webpush(
+            subscription_info=sub,
+            data=json.dumps({'title': title, 'body': body, 'url': url}, ensure_ascii=False),
+            vapid_private_key=VAPID_PRIVATE,
+            vapid_claims={'sub': VAPID_SUBJECT, 'aud': _aud(sub)},
+        )
+        return True
+    except WebPushException as e:
+        try:
+            if e.response and e.response.status_code in (404, 410):
+                return 'expired'
+        except Exception:
+            pass
+        return False
+    except Exception:
+        return False
+
+def broadcast(title, body, url='/'):
+    expired = []
+    with push_lock:
+        items = list(push_subs.items())
+    for dev, rec in items:
+        sub = (rec or {}).get('subscription')
+        if not sub:
+            continue
+        r = send_push(sub, title, body, url)
+        if r == 'expired':
+            expired.append(dev)
+    if expired:
+        with push_lock:
+            for d in expired:
+                push_subs.pop(d, None)
+        save_push()
+
+def push_scheduler():
+    """每 30 秒检查固定事项提醒时间；到点（及迟到 5 分钟内）向所有订阅设备推送。"""
+    while True:
+        try:
+            now = time.localtime()
+            today = time.strftime('%Y-%m-%d', now)
+            cm = now.tm_hour * 60 + now.tm_min
+            with push_lock:
+                sched = []
+                for dev, rec in push_subs.items():
+                    for it in (rec.get('schedule') or []):
+                        t = it.get('time') or ''
+                        if len(t) >= 5:
+                            try:
+                                tm = int(t[0:2]) * 60 + int(t[3:5])
+                            except Exception:
+                                continue
+                            if tm == cm or (tm < cm <= tm + 5):
+                                sched.append(it)
+            if sched:
+                with sent_lock:
+                    due = [it for it in sched if (today, it.get('id')) not in sent_markers]
+                for it in due:
+                    broadcast('🔔 该做啦：' + (it.get('text') or '今日事项'),
+                              '到时间咯，今天也要加油呀～ 🌸', '/')
+                    with sent_lock:
+                        sent_markers[(today, it.get('id'))] = True
+            with sent_lock:
+                for k in [k for k in sent_markers if k[0] != today]:
+                    sent_markers.pop(k, None)
+        except Exception:
+            pass
+        time.sleep(30)
 
 cache = {'updated': '', 'items': []}
 cache_lock = threading.Lock()
@@ -401,6 +517,9 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             self._send_json(200, get_weather(lat, lon))
             return
+        if p in ('/api/ping', '/api/ping/'):
+            self._send_json(200, {'ok': True})
+            return
         return super().do_GET()
 
     def do_POST(self):
@@ -438,9 +557,80 @@ class Handler(SimpleHTTPRequestHandler):
                 out = copy.deepcopy(sync_store[key])
             self._send_json(200, out)
             return
+        if p in ('/api/push/subscribe', '/api/push/subscribe/'):
+            self._post_push('subscribe')
+            return
+        if p in ('/api/push/schedule', '/api/push/schedule/'):
+            self._post_push('schedule')
+            return
+        if p in ('/api/push/unsubscribe', '/api/push/unsubscribe/'):
+            self._post_push('unsubscribe')
+            return
+        if p in ('/api/push/test', '/api/push/test/'):
+            self._post_push('test')
+            return
         self.send_response(405)
         self.end_headers()
         self.wfile.write(b'Method Not Allowed')
+
+    def _read_body(self):
+        try:
+            ln = int(self.headers.get('Content-Length', 0) or 0)
+            raw = self.rfile.read(ln) if ln else b''
+        except Exception:
+            return None
+        if len(raw) > 8 * 1024 * 1024:
+            return None
+        try:
+            return json.loads(raw.decode('utf-8')) if raw else {}
+        except Exception:
+            return None
+
+    def _post_push(self, kind):
+        if not HAVE_WEBPUSH:
+            self._send_json(200, {'ok': False, 'error': 'push 服务未配置'})
+            return
+        data = self._read_body()
+        if data is None:
+            self._send_json(400, {'ok': False, 'error': 'bad body'})
+            return
+        dev = (data.get('device') or '').strip()
+        if kind == 'subscribe':
+            sub = data.get('subscription')
+            sched = data.get('schedule') or []
+            if not dev or not sub:
+                self._send_json(400, {'ok': False, 'error': 'missing device/subscription'})
+                return
+            with push_lock:
+                rec = push_subs.get(dev) or {}
+                rec['subscription'] = sub
+                rec['schedule'] = sched
+                rec['updated'] = int(time.time())
+                push_subs[dev] = rec
+                save_push()
+            self._send_json(200, {'ok': True})
+            return
+        if kind == 'schedule':
+            sched = data.get('schedule') or []
+            with push_lock:
+                rec = push_subs.get(dev) or {}
+                if rec.get('subscription'):
+                    rec['schedule'] = sched
+                    rec['updated'] = int(time.time())
+                    push_subs[dev] = rec
+                    save_push()
+            self._send_json(200, {'ok': True})
+            return
+        if kind == 'unsubscribe':
+            with push_lock:
+                push_subs.pop(dev, None)
+                save_push()
+            self._send_json(200, {'ok': True})
+            return
+        if kind == 'test':
+            broadcast('🔔 测试提醒', '如果看到这条，说明每日提醒已经打通啦 🎉', '/')
+            self._send_json(200, {'ok': True, 'sent': len(push_subs)})
+            return
 
     def guess_type(self, path):
         # 确保 PWA 清单 / Service Worker 的 MIME 正确，否则浏览器拒绝安装或注册
@@ -468,8 +658,12 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 3000))
     load_sync()
+    load_push()
     # 先启动后台抓取循环（首次抓取在后台进行），立即绑定端口，
     # 避免长时间阻塞导致平台（Render 等）健康检查判定启动失败。
     threading.Thread(target=loop, daemon=True).start()
+    if HAVE_WEBPUSH:
+        threading.Thread(target=push_scheduler, daemon=True).start()
+        print('Web Push 调度已启动（固定事项到点自动提醒）')
     print('常驻后端已启动，监听端口', port, '（每', INTERVAL, '秒重新抓取，首抓在后台进行）')
     HTTPServer(('0.0.0.0', port), Handler).serve_forever()

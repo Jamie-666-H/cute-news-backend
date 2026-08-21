@@ -6,8 +6,11 @@ services:
     runtime: python
     plan: free
     region: singapore       # 离中国最近，延迟最低
-    buildCommand: "echo skip-build"
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "python news_server.py"
     envVars:
       - key: PORT
         value: "10000"       # Render 免费套餐固定注入的端口
+      - key: VAPID_PRIVATE
+        sync: false
+        value: "VxW2gdyFJF3bQ78B7PgVLSoSdriLRiI5wiDyEcYB-7Q"

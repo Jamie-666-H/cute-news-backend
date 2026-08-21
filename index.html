@@ -170,6 +170,30 @@
   .item .del:hover{background:#ffd0d0}
   .item .star.on{background:var(--pink);color:#fff}
   .empty{text-align:center;color:var(--text-soft);padding:30px;font-size:14px}
+  /* 待办：固定事项 + 每日随机 + 提醒 */
+  .todo-sec{background:linear-gradient(135deg,#fff,#fff4f9);border:2px solid var(--line);border-radius:18px;padding:16px;margin-bottom:16px;box-shadow:0 4px 14px rgba(255,143,177,.10)}
+  .todo-sec-h{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:800;font-size:16px;color:var(--pink-deep);margin-bottom:4px}
+  .todo-sec-sub{font-size:12px;color:var(--text-soft);margin:2px 0 12px;line-height:1.5}
+  .add-form .time-in{flex:0 0 auto;min-width:0;width:118px}
+  .add-form .imp{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text-soft);flex:0 0 auto}
+  .item .time-badge{border:2px solid var(--line);background:var(--pink-soft);color:var(--pink-deep);border-radius:10px;padding:5px 8px;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0}
+  .reroll{border:none;background:var(--pink-soft);color:var(--pink-deep);border-radius:10px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .reroll:hover{background:var(--pink);color:#fff}
+  .pool-box{margin-top:6px;border-top:1px dashed var(--line);padding-top:12px}
+  .pool-box summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--pink-deep);margin-bottom:10px}
+  .pool-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .pool-item{display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--line);border-radius:20px;padding:5px 6px 5px 12px;font-size:13px;color:var(--text)}
+  .pool-item .del{width:24px;height:24px;font-size:12px}
+  .count-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-soft);margin-top:4px}
+  .count-in{width:64px;border:2px solid var(--line);border-radius:10px;padding:5px 8px;font-size:13px;text-align:center;color:var(--text);background:#fff5f8}
+  .remind-row{display:flex;align-items:center;gap:12px;margin-top:8px}
+  .remind-state{font-size:13px;color:var(--text-soft);font-weight:600}
+  .switch{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0}
+  .switch input{opacity:0;width:0;height:0}
+  .switch .track{position:absolute;inset:0;background:#e9d3dd;border-radius:20px;transition:.2s;cursor:pointer}
+  .switch .track:before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .switch input:checked+.track{background:linear-gradient(135deg,var(--pink),var(--pink-deep))}
+  .switch input:checked+.track:before{transform:translateX(20px)}
   .pill{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--pink-soft);color:var(--pink-deep);font-weight:700}
   .pos{color:#3f9c5a;font-weight:700}
   .neg{color:#e07a8b;font-weight:700}
@@ -600,14 +624,53 @@ function defaults(){
     english:{words:[]},
     reading:{books:[],logs:[]},
     finance:{txns:[]},
-    todo:{tasks:[]},
+    todo:{
+      fixed:[],
+      randomPool:[
+        {id:'rp1',text:'喝一杯温水 💧'},
+        {id:'rp2',text:'活动脖子和肩膀 3 分钟'},
+        {id:'rp3',text:'读几页喜欢的书 📚'},
+        {id:'rp4',text:'写下一句今天的小确幸 ✨'},
+        {id:'rp5',text:'出门散散步 15 分钟 🌿'},
+        {id:'rp6',text:'做一组拉伸 🧘'},
+        {id:'rp7',text:'给在乎的人发个消息 💬'},
+        {id:'rp8',text:'整理一下桌面和心情 🧹'},
+        {id:'rp9',text:'对镜子笑一下，夸夸自己 🌸'},
+        {id:'rp10',text:'复盘今天学到的东西 🧠'},
+        {id:'rp11',text:'早点躺下，保证睡够 ⭐'},
+        {id:'rp12',text:'听一首喜欢的歌 🎵'}
+      ],
+      randomCount:3,
+      randomToday:{date:'',ids:[]},
+      done:{}
+    },
     news:{items:[]},
     mood:{entries:[],plogs:[],dailyNotes:{}}
   };
 }
+function normalizeTodo(d){
+  if(!d || !d.todo || typeof d.todo!=='object'){ if(d) d.todo=defaults().todo; return; }
+  const b=defaults().todo;
+  if(!Array.isArray(d.todo.fixed)) d.todo.fixed=[];
+  if(!Array.isArray(d.todo.randomPool) || d.todo.randomPool.length===0) d.todo.randomPool=b.randomPool.slice();
+  if(typeof d.todo.randomCount!=='number' || d.todo.randomCount<1) d.todo.randomCount=b.randomCount;
+  if(!d.todo.randomToday || typeof d.todo.randomToday!=='object') d.todo.randomToday={date:'',ids:[]};
+  if(!d.todo.done || typeof d.todo.done!=='object') d.todo.done={};
+}
+function migrateTodo(d){
+  if(d && d.todo && Array.isArray(d.todo.tasks)){
+    // 旧版扁平待办 -> 全部迁移为「固定事项」（不带提醒时间）
+    const fixed=(d.todo.tasks||[]).map(t=>({
+      id:(t&&t.id)||uid(), text:(t&&t.text)||'', important:!!(t&&t.important), time:''
+    }));
+    d.todo.fixed=fixed; delete d.todo.tasks;
+  }
+  normalizeTodo(d);
+}
 function load(){
   try{ const r=localStorage.getItem(KEY); if(!r) return defaults();
     const d=JSON.parse(r); const base=defaults();
+    migrateTodo(d);
     // 浅合并，保证新字段存在
     for(const k in base){ if(!(k in d)) d[k]=base[k]; }
     if(!d.settings) d.settings=base.settings;
@@ -621,7 +684,7 @@ const IDB_NAME='cute-workbench-idb', IDB_STORE='db', IDB_KEY='main';
 function idbOpen(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open(IDB_NAME,1); r.onupgradeneeded=()=>{ try{ r.result.createObjectStore(IDB_STORE); }catch(e){} }; r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }catch(e){ rej(e); } }); }
 function idbSave(db){ return idbOpen().then(c=>new Promise((res,rej)=>{ const t=c.transaction(IDB_STORE,'readwrite'); t.objectStore(IDB_STORE).put(db,IDB_KEY); t.oncomplete=()=>res(); t.onerror=()=>rej(t.error); })); }
 function idbLoad(){ return idbOpen().then(c=>new Promise((res,rej)=>{ const t=c.transaction(IDB_STORE,'readonly'); const rq=t.objectStore(IDB_STORE).get(IDB_KEY); rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>rej(rq.error); })); }
-async function loadIdb(){ let d=null; try{ d=await idbLoad(); }catch(e){} if(d){ const base=defaults(); for(const k in base){ if(!(k in d)) d[k]=base[k]; } if(!d.settings) d.settings=base.settings; if(!d.settings.daily) d.settings.daily=base.settings.daily; if(!d.updated) d.updated=0; DB=d; } else { DB=load(); } }
+async function loadIdb(){ let d=null; try{ d=await idbLoad(); }catch(e){} if(d){ migrateTodo(d); const base=defaults(); for(const k in base){ if(!(k in d)) d[k]=base[k]; } if(!d.settings) d.settings=base.settings; if(!d.settings.daily) d.settings.daily=base.settings.daily; if(!d.updated) d.updated=0; DB=d; } else { DB=load(); } }
 let DB = defaults();
 function save(){ DB.updated=Date.now(); idbSave(DB).catch(()=>{}); try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){} schedulePush(); }
 
@@ -1294,7 +1357,9 @@ function renderGreeting(){
 function renderTopStats(){
   const box=$('#topStats'); if(!box) return;
   const t=todayStr();
-  const todoRemain=DB.todo.tasks.filter(x=>x.date===t && !x.done).length;
+  const tf=(DB.todo.fixed||[]).filter(x=>!isTodoDone('f:'+x.id)).length;
+  const tr=todayRandomItems().filter(x=>!isTodoDone('r:'+x.id)).length;
+  const todoRemain=tf+tr;
   const frames=DB.mood.plogs.filter(p=>p.date===t).length;
   const exp=DB.finance.txns.filter(x=>x.date===t && x.type==='expense').reduce((s,x)=>s+(+x.amount||0),0);
   const sig=todoRemain+'|'+frames+'|'+exp;
@@ -1793,31 +1858,160 @@ function renderFinance(){
   return h+'</div>';
 }
 
-/* --- 6. 待办计划 --- */
-function renderTodo(){
-  const tasks=DB.todo.tasks;
+/* --- 6. 待办计划（固定事项 + 每日随机） --- */
+function todoDoneMap(){ const t=todayStr(); if(!DB.todo.done[t]) DB.todo.done[t]={}; return DB.todo.done[t]; }
+function isTodoDone(key){ const m=DB.todo.done[todayStr()]; return !!(m&&m[key]); }
+function setTodoDone(key,val){ const m=todoDoneMap(); m[key]=val?true:false; save(); }
+function ensureRandomToday(){
   const t=todayStr();
-  const todayTasks=tasks.filter(x=>x.date===t);
-  const done=todayTasks.filter(x=>x.done).length;
-  const list=filt(tasks).slice().reverse();
+  const todo=DB.todo;
+  if(todo.randomToday.date!==t){
+    const pool=(todo.randomPool||[]).filter(x=>x&&x.text&&x.text.trim());
+    const n=Math.min(todo.randomCount||3, pool.length);
+    const ids=pool.slice().sort(()=>Math.random()-0.5).slice(0,n).map(x=>x.id);
+    todo.randomToday={date:t, ids};
+    save();
+  }
+}
+function todayRandomItems(){
+  const ids=new Set(DB.todo.randomToday.ids||[]);
+  return (DB.todo.randomPool||[]).filter(x=>ids.has(x.id));
+}
+function renderTodo(){
+  const todo=DB.todo;
+  ensureRandomToday();
+  const t=todayStr();
+  const fixed=todo.fixed||[];
+  const fixedDone=fixed.filter(x=>isTodoDone('f:'+x.id)).length;
+  const rand=todayRandomItems();
+  const randDone=rand.filter(x=>isTodoDone('r:'+x.id)).length;
   let h=`<div class="mod-head"><h2>✅ 待办计划</h2>
-    <div class="stats"><span>今日 ${done}/${todayTasks.length} 完成</span></div></div>
-    ${filterBar('todo')}
-    <form class="add-form" data-act="addTodo">
-      <input name="text" placeholder="今天要做什么？" required>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-soft)"><input type="checkbox" name="important"> 重要</label>
+    <div class="stats"><span>固定 ${fixedDone}/${fixed.length} · 随机 ${randDone}/${rand.length}</span></div></div>`;
+  // —— 固定事项 ——
+  h+=`<div class="todo-sec">
+    <div class="todo-sec-h"><span>☀️ 每天要做</span><span class="todo-sec-sub">每天自动出现，给每件设个提醒时间</span></div>
+    <form class="add-form" data-act="addFixed">
+      <input name="text" placeholder="比如：背 20 个单词" required>
+      <input type="time" name="time" class="time-in" title="提醒时间（可留空）">
+      <label class="imp"><input type="checkbox" name="important"> 重要</label>
       <button>添加</button>
-    </form>
-    <div class="list">`;
-  if(list.length===0) h+='<p class="empty">列个清单，把今天安排得明明白白～ 🗒️</p>';
-  list.forEach(x=>{
-    h+=`<div class="item ${x.done?'done':''}">
-      <label class="chk"><input type="checkbox" data-act="doneTodo" data-i="${x.id}" ${x.done?'checked':''}><span class="title">${esc(x.text)}</span></label>
-      <button class="star ${x.important?'on':''}" data-act="starTodo" data-i="${x.id}" title="标记重要">${x.important?'⭐':'☆'}</button>
-      <button class="del" data-act="delTodo" data-i="${x.id}">🗑</button>
+    </form>`;
+  if(fixed.length===0) h+='<p class="empty">还没有固定事项，把每天必做的事加进来吧～ 🌱</p>';
+  fixed.slice().sort((a,b)=>(a.time||'99:99').localeCompare(b.time||'99:99')).forEach(x=>{
+    const done=isTodoDone('f:'+x.id);
+    h+=`<div class="item ${done?'done':''}">
+      <label class="chk"><input type="checkbox" data-act="doneFixed" data-i="${x.id}" ${done?'checked':''}><span class="title">${esc(x.text)}</span></label>
+      <input type="time" class="time-badge" data-act="setFixedTime" data-i="${x.id}" value="${esc(x.time||'')}" title="提醒时间">
+      <button class="star ${x.important?'on':''}" data-act="starFixed" data-i="${x.id}" title="重要">${x.important?'⭐':'☆'}</button>
+      <button class="del" data-act="delFixed" data-i="${x.id}">🗑</button>
     </div>`;
   });
-  return h+'</div>';
+  h+='</div>';
+  // —— 每日随机待办 ——
+  h+=`<div class="todo-sec">
+    <div class="todo-sec-h"><span>🎲 今日随机待办</span><button class="b-soft reroll" data-act="rerollRandom">🔄 换一批</button></div>
+    <p class="todo-sec-sub">每天自动从随机池里抽 ${todo.randomCount} 件，给生活加点小惊喜～</p>`;
+  if(rand.length===0) h+='<p class="empty">随机池空空的，去下面的「我的随机池」加点料吧 🎲</p>';
+  rand.forEach(x=>{
+    const done=isTodoDone('r:'+x.id);
+    h+=`<div class="item ${done?'done':''}">
+      <label class="chk"><input type="checkbox" data-act="doneRandom" data-i="${x.id}" ${done?'checked':''}><span class="title">${esc(x.text)}</span></label>
+      <button class="del" data-act="delRandomToday" data-i="${x.id}" title="这条今天不要了">✕</button>
+    </div>`;
+  });
+  h+=`<details class="pool-box">
+    <summary>📚 我的随机池（${todo.randomPool.length} 条）</summary>
+    <form class="add-form mini" data-act="addRandomPool">
+      <input name="text" placeholder="加一条随机待办" required>
+      <button>加</button>
+    </form>
+    <div class="pool-list">`;
+  todo.randomPool.forEach(x=>{
+    h+=`<div class="pool-item"><span>${esc(x.text)}</span><button class="del" data-act="delRandomPool" data-i="${x.id}">🗑</button></div>`;
+  });
+  h+=`</div>
+    <label class="count-row">每天抽几条：
+      <input type="number" min="1" max="10" data-act="setRandomCount" value="${todo.randomCount}" class="count-in"></label>
+  </details></div>`;
+  // —— 每日提醒（推送） ——
+  h+=renderReminder();
+  return h;
+}
+/* --- 每日提醒：Web Push 网页推送 --- */
+const VAPID_PUBLIC='BGsde9o-MzxqNO0vzu6VPhPq__PNTzqx_GwgNBNvMcTkbQcx3QVtBBIer3qU1tvx3SfwKjZM1rq6YEGpM85wchA';
+function urlBase64ToUint8Array(b64){
+  const p='='.repeat((4-(b64.length%4))%4);
+  const raw=atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
+  const out=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);
+  return out;
+}
+function pushDeviceId(){
+  let id=localStorage.getItem('pushDevice');
+  if(!id){ id='dev-'+Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('pushDevice',id); }
+  return id;
+}
+function isPushSubscribed(){ return localStorage.getItem('pushSubscribed')==='1'; }
+function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
+function renderReminder(){
+  let h=`<div class="todo-sec remind">
+    <div class="todo-sec-h"><span>🔔 每日提醒</span></div>`;
+  if(!pushSupported()){
+    h+=`<p class="todo-sec-sub">当前浏览器不支持系统推送。把小天地「添加到主屏幕」并用手机浏览器打开，就能开启自动提醒 📱</p>`;
+  }else{
+    const sub=isPushSubscribed();
+    h+=`<p class="todo-sec-sub">开启后，到每件固定事项的提醒时间，手机系统会自动弹通知（不用打开 App）。</p>
+    <div class="remind-row">
+      <label class="switch"><input type="checkbox" data-act="togglePush" ${sub?'checked':''}><span class="track"></span></label>
+      <span class="remind-state">${sub?'已开启 · 到点自动提醒 🔔':'未开启'}</span>
+    </div>
+    <button class="b-soft" data-act="testPush" style="margin-top:6px">📨 发一条测试通知</button>
+    <p class="todo-sec-sub" style="margin-top:6px">需把小天地装到手机桌面并允许通知；免费服务器偶尔会晚几分钟（在「设置/数据」里开启保活可减少延迟）。</p>`;
+  }
+  h+='</div>';
+  return h;
+}
+async function subscribePush(){
+  if(!pushSupported()){ toast('当前浏览器不支持推送'); return; }
+  let perm='granted';
+  try{ perm=await Notification.requestPermission(); }catch(e){}
+  if(perm!=='granted'){ toast('需要允许通知才能提醒你哦 🔔'); return; }
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlBase64ToUint8Array(VAPID_PUBLIC)});
+    }
+    const dev=pushDeviceId();
+    const sched=(DB.todo.fixed||[]).filter(x=>x.time).map(x=>({id:x.id,text:x.text,time:x.time,important:!!x.important}));
+    await fetch(BACKEND+'/api/push/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:dev, subscription:sub.toJSON(), schedule:sched})});
+    localStorage.setItem('pushSubscribed','1');
+    toast('已开启每日提醒 🔔 到时间会弹通知');
+  }catch(e){ toast('订阅失败：'+(e&&e.message?e.message:'请检查网络')); }
+  renderView();
+}
+async function unsubscribePush(){
+  try{ const reg=await navigator.serviceWorker.ready; const sub=await reg.pushManager.getSubscription(); if(sub) await sub.unsubscribe(); }catch(e){}
+  const dev=pushDeviceId();
+  try{ await fetch(BACKEND+'/api/push/unsubscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:dev})}); }catch(e){}
+  localStorage.setItem('pushSubscribed','0');
+  toast('已关闭每日提醒');
+  renderView();
+}
+async function testPush(){
+  try{
+    const r=await fetch(BACKEND+'/api/push/test',{method:'POST'});
+    const j=await r.json().catch(()=>({}));
+    toast(j&&j.ok? '已发送测试通知，看手机有没有弹 🔔' : '测试发送失败：'+((j&&j.error)||''));
+  }catch(e){ toast('测试失败，检查网络'); }
+}
+async function pushScheduleSync(){
+  if(!isPushSubscribed()) return;
+  try{
+    const dev=pushDeviceId();
+    const sched=(DB.todo.fixed||[]).filter(x=>x.time).map(x=>({id:x.id,text:x.text,time:x.time,important:!!x.important}));
+    await fetch(BACKEND+'/api/push/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:dev, schedule:sched})});
+  }catch(e){}
 }
 
 /* --- 7. 新闻热点 --- */
@@ -2035,7 +2229,12 @@ function handleAct(act,el){
     case 'toggleShow': ui.showAll[id]=!ui.showAll[id]; renderView(); break;
     case 'clearToday': clearToday(id); break;
     case 'delTxn': removeFrom(DB.finance.txns,i); save(); renderView(); break;
-    case 'delTodo': removeFrom(DB.todo.tasks,i); save(); renderView(); break;
+    case 'starFixed': { const x=(DB.todo.fixed||[]).find(p=>p.id===i); if(x){x.important=!x.important; save(); pushScheduleSync(); renderView();} break; }
+    case 'delFixed': { DB.todo.fixed=(DB.todo.fixed||[]).filter(p=>p.id!==i); save(); pushScheduleSync(); renderView(); break; }
+    case 'delRandomToday': { DB.todo.randomToday.ids=(DB.todo.randomToday.ids||[]).filter(id=>id!==i); save(); renderView(); break; }
+    case 'delRandomPool': { DB.todo.randomPool=(DB.todo.randomPool||[]).filter(p=>p.id!==i); save(); renderView(); break; }
+    case 'rerollRandom': { DB.todo.randomToday={date:'',ids:[]}; ensureRandomToday(); save(); renderView(); toast('已换一批随机待办 🎲'); break; }
+    case 'testPush': testPush(); break;
     case 'readPrev': rotateReading(-1); break;
     case 'readNext': rotateReading(1); break;
     case 'refreshRead': fetchReading(true); break;
@@ -2079,7 +2278,6 @@ function handleAct(act,el){
     case 'togglePlay': togglePlay(); break;
     case 'nextSong': playStep(1); break;
     case 'prevSong': playStep(-1); break;
-    case 'starTodo': { const x=findIn(DB.todo.tasks,i); if(x){x.important=!x.important; save(); renderView();} break; }
     case 'plogAddFrame': { ui.plogTargetId=null; const fi=$('#plogFile'); if(fi) fi.click(); break; }
     case 'plogPickImg': {
       if(ui.selMode){ toggleSel(id); break; }
@@ -2163,7 +2361,11 @@ function handleAct(act,el){
 function handleChange(act,el){
   const i=el.dataset.i;
   switch(act){
-    case 'doneTodo': { const x=findIn(DB.todo.tasks,i); if(x){x.done=el.checked; save(); renderView();} break; }
+    case 'doneFixed': { setTodoDone('f:'+i, el.checked); renderView(); break; }
+    case 'doneRandom': { setTodoDone('r:'+i, el.checked); renderView(); break; }
+    case 'setFixedTime': { const x=(DB.todo.fixed||[]).find(p=>p.id===i); if(x){ x.time=el.value||''; save(); pushScheduleSync(); renderView(); } break; }
+    case 'setRandomCount': { let n=parseInt(el.value,10)||3; n=Math.max(1,Math.min(10,n)); DB.todo.randomCount=n; DB.todo.randomToday={date:'',ids:[]}; ensureRandomToday(); save(); renderView(); break; }
+    case 'togglePush': { if(el.checked) subscribePush(); else unsubscribePush(); break; }
     case 'toggleDaily': { const id=el.dataset.id; DB.settings.daily[id]=el.checked; ui.showAll[id]=!el.checked; save(); break; }
     case 'plogFile': {
       const f=el.files && el.files[0]; if(!f) return;
@@ -2196,8 +2398,11 @@ function handleForm(act,form){
     case 'addTxn': {
       DB.finance.txns.push({id:uid(),type:f.type.value,amount:+f.amount.value,category:f.category.value.trim(),note:f.note.value.trim(),date:todayStr()});
       break; }
-    case 'addTodo': {
-      DB.todo.tasks.push({id:uid(),text:f.text.value.trim(),important:f.important.checked,done:false,date:todayStr()});
+    case 'addFixed': {
+      DB.todo.fixed.push({id:uid(),text:f.text.value.trim(),important:f.important.checked,time:f.time.value||''});
+      break; }
+    case 'addRandomPool': {
+      DB.todo.randomPool.push({id:uid(),text:f.text.value.trim()});
       break; }
   }
   save(); form.reset(); renderView();
@@ -2208,7 +2413,7 @@ function clearToday(id){
   const t=todayStr();
   switch(id){
     case 'finance': DB.finance.txns=DB.finance.txns.filter(x=>x.date!==t); break;
-    case 'todo': DB.todo.tasks=DB.todo.tasks.filter(x=>x.date!==t); break;
+    case 'todo': { if(DB.todo.done[t]) delete DB.todo.done[t]; break; }
     case 'mood': DB.mood.plogs=DB.mood.plogs.filter(x=>x.date!==t); break;
   }
   save(); renderView(); toast('今日记录已清空');
