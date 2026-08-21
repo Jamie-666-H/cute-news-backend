@@ -2,12 +2,7 @@
   # 站点本身就是单文件前端，无需构建；发布目录即仓库根
   publish = "."
   functions = "netlify/functions"
-  buildCommand = "echo skip-build"
-
-[functions]
-  # 免费档函数最大超时 10s；新闻抓取已并行化以压在 10s 内
-  node_bundler = "esbuild"
-  timeout = 10
+  command = "echo skip-build"
 
 [build.environment]
   # Web Push 的 VAPID 密钥（与前端 VAPID_PUBLIC 配套）。免费、无需绑卡。
