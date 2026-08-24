@@ -753,23 +753,28 @@ async function pullSync(silent){
         initShowAll(); renderSidebar(); renderView();
         setSync('ok');
         if(!silent) toast('已从云端同步最新数据 ☁️');
-        return true;
       }
     }
-    // 云端为空（例如首次/换域名/存储未持久）：尝试载入同源种子文件回填，避免旧数据“消失”
-    const seeded = await loadSeedIfEmpty();
-    setSync(seeded ? 'ok' : 'off');
-    return seeded;
+    // 关键修复：云端有数据但可能是“空壳”（mood 为空），或云端为空。
+    // 只要本地相框/心情仍为空，就尝试用同源种子文件回填，避免旧数据“消失”。
+    const remoteMood=(DB.mood&&((DB.mood.plogs&&DB.mood.plogs.length)||(DB.mood.entries&&DB.mood.entries.length)));
+    let seeded=false;
+    if(!remoteMood){ seeded=await loadSeedIfEmpty(); }
+    setSync((seeded||j&&j.data)?'ok':'off');
+    return seeded || !!(j&&j.data);
   }catch(e){ setSync('off'); if(!silent) toast('云端暂时连不上，用的本地数据'); return false; }
 }
-let _seedTried=false;
+// 本地相框/心情是否已恢复（恢复过就别再用种子覆盖，也别反复刷）
+let _seedRecovered=false;
 async function loadSeedIfEmpty(){
   try{
-    if(_seedTried) return false; _seedTried=true;
+    if(_seedRecovered) return false;
     const localMood=(DB.mood&&((DB.mood.plogs&&DB.mood.plogs.length)||(DB.mood.entries&&DB.mood.entries.length)));
-    if(localMood) return false; // 本地已有相框/心情，不覆盖
+    if(localMood){ _seedRecovered=true; return false; } // 本地已有相框/心情，不覆盖
     const r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok) return false;
+    if(!r.ok || !r.headers.get('content-length') || Number(r.headers.get('content-length'))<1000){
+      return false; // 种子没取到（或被边缘缓存成空壳），下次同步再试，不一次性放弃
+    }
     const j=await r.json();
     const seed=j&&j.data; if(!seed) return false;
     if(isEnc(seed)){
@@ -782,6 +787,7 @@ async function loadSeedIfEmpty(){
     save();
     _suppressPush=false;
     initShowAll(); renderSidebar(); renderView();
+    _seedRecovered=true;
     toast('已为你恢复之前的相框与心情 📷');
     return true;
   }catch(e){ return false; }
