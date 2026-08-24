@@ -756,9 +756,35 @@ async function pullSync(silent){
         return true;
       }
     }
-    setSync('ok');
-    return false;
+    // 云端为空（例如首次/换域名/存储未持久）：尝试载入同源种子文件回填，避免旧数据“消失”
+    const seeded = await loadSeedIfEmpty();
+    setSync(seeded ? 'ok' : 'off');
+    return seeded;
   }catch(e){ setSync('off'); if(!silent) toast('云端暂时连不上，用的本地数据'); return false; }
+}
+let _seedTried=false;
+async function loadSeedIfEmpty(){
+  try{
+    if(_seedTried) return false; _seedTried=true;
+    const localMood=(DB.mood&&((DB.mood.plogs&&DB.mood.plogs.length)||(DB.mood.entries&&DB.mood.entries.length)));
+    if(localMood) return false; // 本地已有相框/心情，不覆盖
+    const r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return false;
+    const j=await r.json();
+    const seed=j&&j.data; if(!seed) return false;
+    if(isEnc(seed)){
+      if(!_cryptoKey){ const ok=await ensureKey(); if(!ok) return false; }
+      var remoteSeed=await decObj(seed, _cryptoKey);
+    } else { var remoteSeed=seed; }
+    _suppressPush=true;
+    DB=mergeDB(DB, remoteSeed);
+    DB.updated=Math.max(Number(DB.updated)||0, Number(j.updated)||0);
+    save();
+    _suppressPush=false;
+    initShowAll(); renderSidebar(); renderView();
+    toast('已为你恢复之前的相框与心情 📷');
+    return true;
+  }catch(e){ return false; }
 }
 function setSync(state){
   const b=document.getElementById('syncBadge'); if(!b) return;

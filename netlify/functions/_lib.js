@@ -9,13 +9,61 @@ const VAPID_PRIVATE = process.env.VAPID_PRIVATE || 'VxW2gdyFJF3bQ78B7PgVLSoSdriL
 const VAPID_SUBJECT = 'mailto:cute-workbench@example.com';
 try { webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE); } catch (e) {}
 
-/* ---------------- Netlify Blobs 存储 ---------------- */
-function blob(name) { return getStore({ name }); }
+/* ---------------- 用户同步存储 ----------------
+   优先写回 GitHub 仓库（免费、持久、不占 Netlify 流量）：sync_store.json。
+   需要环境变量 GH_TOKEN（对 Jamie-666-H/cute-news-backend 有 write 权限的 PAT）。
+   无 token 时退化为内存存储（仅本次进程有效，用于调试/兼容）。 */
+const GH_REPO = process.env.GH_REPO || 'Jamie-666-H/cute-news-backend';
+const GH_TOKEN = process.env.GH_TOKEN || '';
+// 每个 store 对应仓库里的一个 JSON 文件（结构：按键存值）
+const FILE_OF = { 'cute-sync': 'sync_store.json', 'cute-push': 'push_subs.json' };
+const _mem = {};
+
+async function ghGet(path) {
+  const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
+  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  if (!r.ok) return null;
+  const j = await r.json();
+  if (!j.content) return null;
+  return { sha: j.sha, text: Buffer.from(j.content, j.encoding || 'base64').toString('utf-8') };
+}
+async function ghPut(path, content, sha) {
+  const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
+  const body = { message: 'sync: update user data', content: Buffer.from(content, 'utf-8').toString('base64') };
+  if (sha) body.sha = sha;
+  const r = await fetch(url, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  return r.ok;
+}
+
 async function blobGet(name, key) {
-  try { return await blob(name).get(key, { type: 'json' }); } catch (e) { return null; }
+  const file = FILE_OF[name];
+  if (GH_TOKEN && file) {
+    try {
+      const f = await ghGet(file);
+      if (!f) return null;
+      const all = JSON.parse(f.text);
+      return all[key] || null;
+    } catch (e) { console.error('ghGet fail', name, e && e.message); }
+  }
+  if (_mem[name] && _mem[name][key]) return _mem[name][key];
+  return null;
 }
 async function blobSet(name, key, val) {
-  try { await blob(name).set(key, JSON.stringify(val)); return true; } catch (e) { console.error('blobSet fail', e && e.message); return false; }
+  const file = FILE_OF[name];
+  if (GH_TOKEN && file) {
+    try {
+      const f = await ghGet(file);
+      let all = {};
+      if (f) { try { all = JSON.parse(f.text); } catch (e) { all = {}; } }
+      all[key] = val;
+      const str = JSON.stringify(all);
+      if (str.length > 9 * 1024 * 1024) { console.error('store too large, skip', name); return false; }
+      return await ghPut(file, str, f && f.sha);
+    } catch (e) { console.error('ghPut fail', name, e && e.message); return false; }
+  }
+  if (!_mem[name]) _mem[name] = {};
+  _mem[name][key] = val;
+  return true;
 }
 
 /* ---------------- 通用抓取工具 ---------------- */

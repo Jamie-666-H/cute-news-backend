@@ -1,6 +1,8 @@
 node_modules/
 __pycache__/
 *.pyc
-sync_store.json
 push_subs.json
 .netlify/
+# sync_store.json 现在由后端通过 GH_TOKEN 写回 GitHub，本地不提交
+# seed-sync.json 是初次填充用的种子（含历史相框），需要随站点部署
+sync_store.json

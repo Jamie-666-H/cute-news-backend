@@ -8,6 +8,11 @@
   # Web Push 的 VAPID 密钥（与前端 VAPID_PUBLIC 配套）。免费、无需绑卡。
   VAPID_PUBLIC = "BGsde9o-MzxqNO0vzu6VPhPq__PNTzqx_GwgNBNvMcTkbQcx3QVtBBIer3qU1tvx3SfwKjZM1rq6YEGpM85wchA"
   VAPID_PRIVATE = "VxW2gdyFJF3bQ78B7PgVLSoSdriLRiI5wiDyEcYB-7Q"
+  # 云端同步/推送订阅持久化到 GitHub 仓库（免费、不占 Netlify 流量）。
+  # 在 Netlify 后台 Site settings → Environment variables 添加：
+  #   GH_TOKEN = 一个对 Jamie-666-H/cute-news-backend 有 write 权限的 GitHub Personal Access Token
+  #   GH_REPO  = Jamie-666-H/cute-news-backend （一般无需改）
+  # 不填则同步仅本机生效（数据存在手机本地），换设备/清缓存需重新导入。
 
 # 把 /api/* 路由到同名云函数（保证前端同源调用，无需改代码）
 [[redirects]]
