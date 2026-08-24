@@ -745,6 +745,11 @@ async function pullSync(silent){
         remote=await decObj(remote, _cryptoKey);
       }
       const ru=Number(remote&&remote.updated)||0; const lu=Number(DB.updated)||0;
+      // 空壳保护：云端 mood 是空壳（无 plogs 且无 entries）但本地有相框 → 用本地 mood 替换，避免被空壳冲掉今天的照片
+      const _rm=remote.mood, _lm=DB.mood;
+      if(_rm && _lm && (!_rm.plogs||!_rm.plogs.length) && (!_rm.entries||!_rm.entries.length) && ((_lm.plogs&&_lm.plogs.length)||(_lm.entries&&_lm.entries.length))){
+        remote=Object.assign({}, remote, {mood:_lm});
+      }
       if(ru>lu){
         _suppressPush=true;
         DB=mergeDB(DB, remote);
@@ -763,15 +768,12 @@ async function pullSync(silent){
     return seeded || !!(j&&j.data);
   }catch(e){ setSync('off'); if(!silent) toast('云端暂时连不上，用的本地数据'); return false; }
 }
-// 历史相框是否已从种子补齐（补齐过就不再反复刷 2.8MB 种子）
-let _seedRecovered=false;
 async function loadSeedIfEmpty(){
   try{
-    if(_seedRecovered) return false;
     const localPlen=(DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0;
     const localElen=(DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0;
-    // 本地已经有≥5张相框或≥2条心情（接近种子全量），视为已恢复，不再刷种子
-    if(localPlen>=5 && localElen>=2){ _seedRecovered=true; return false; }
+    // 本地已经齐全（≥5张相框且≥2条心情），无需补种子
+    if(localPlen>=5 && localElen>=2){ return false; }
     let j=null, seed=window.WITH_SEED_DATA;
     if(!seed){
       const r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now(),{cache:'no-store'});
@@ -792,7 +794,6 @@ async function loadSeedIfEmpty(){
     _suppressPush=false;
     const after=((DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0)+((DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0);
     initShowAll(); renderSidebar(); renderView();
-    _seedRecovered=true;
     if(after>before) toast('已为你补回之前的相框与心情 📷');
     return after>before;
   }catch(e){ return false; }
@@ -2713,8 +2714,8 @@ async function init(){
   // 云端同步：启动即拉取最新，之后每 45 秒自动双向同步
   injectSyncBadge();
   if(localStorage.getItem('syncLockOn')==='1'){ try{ await ensureKey(); }catch(e){} }
-  pullSync(true).then(()=>pushSync());
-  setInterval(()=>{ pullSync(true).then(()=>pushSync()); }, 45000);
+  pullSync(true).then(()=>recoverSeed()).then(()=>pushSync());
+  setInterval(()=>{ pullSync(true).then(()=>recoverSeed()).then(()=>pushSync()); }, 45000);
   // 启动即尝试恢复历史相框（用内联种子，不依赖网络/缓存，加载就有）
   recoverSeed();
 }
