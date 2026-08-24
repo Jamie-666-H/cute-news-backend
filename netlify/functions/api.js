@@ -15,7 +15,7 @@ function parseBody(event) {
 }
 
 exports.handler = async (event) => {
-  const p = (event.path || '').replace('/.netlify/functions/api', '') || '/';
+  const p = (event.path || '').replace(/^\/.netlify\/functions\/api/, '').replace(/^\/api/, '') || '/';
   const method = event.httpMethod || 'GET';
   const q = event.queryStringParameters || {};
 
