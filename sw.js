@@ -1,5 +1,5 @@
 /* 我的小天地 - 离线缓存 Service Worker */
-const CACHE = 'cute-workbench-v62';
+const CACHE = 'cute-workbench-v63';
 const ASSETS = [
   './',
   './index.html',
@@ -25,6 +25,12 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // 页面与脚本始终走网络，避免旧缓存锁定导致一直跑旧代码（相框恢复依赖最新代码）
+  if (url.pathname === '/' || url.pathname.endsWith('index.html') || url.pathname.endsWith('.html')) {
+    e.respondWith(fetch(e.request).catch(() => caches.match('./index.html')));
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(r =>
       r || fetch(e.request).catch(() => caches.match('./index.html'))

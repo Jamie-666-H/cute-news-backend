@@ -508,6 +508,7 @@
 <!-- iOS：不声明 apple-mobile-web-app-capable → 主页图标在 Safari 中打开，避开独立 WebApp 底部手势冲突 -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<script src="./seed.js"></script>
 </head>
 <body>
   <aside class="sidebar">
@@ -2714,6 +2715,8 @@ async function init(){
   if(localStorage.getItem('syncLockOn')==='1'){ try{ await ensureKey(); }catch(e){} }
   pullSync(true).then(()=>pushSync());
   setInterval(()=>{ pullSync(true).then(()=>pushSync()); }, 45000);
+  // 启动即尝试恢复历史相框（用内联种子，不依赖网络/缓存，加载就有）
+  recoverSeed();
 }
 function setupAudio(){
   const a=document.getElementById('player');
@@ -2732,6 +2735,5 @@ function setupAudio(){
 init();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 </script>
-<script src="./seed.js"></script>
 </body>
 </html>
