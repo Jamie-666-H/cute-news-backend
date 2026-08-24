@@ -771,12 +771,14 @@ async function loadSeedIfEmpty(){
     const localElen=(DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0;
     // 本地已经有≥5张相框或≥2条心情（接近种子全量），视为已恢复，不再刷种子
     if(localPlen>=5 && localElen>=2){ _seedRecovered=true; return false; }
-    const r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok || !r.headers.get('content-length') || Number(r.headers.get('content-length'))<1000){
-      return false; // 种子没取到（或被边缘缓存成空壳），下次同步再试，不一次性放弃
+    let j=null, seed=window.WITH_SEED_DATA;
+    if(!seed){
+      const r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now(),{cache:'no-store'});
+      if(!r.ok || !r.headers.get('content-length') || Number(r.headers.get('content-length'))<1000){
+        return false; // 种子没取到（或被边缘缓存成空壳），下次同步再试，不一次性放弃
+      }
+      j=await r.json(); seed=j&&j.data; if(!seed) return false;
     }
-    const j=await r.json();
-    const seed=j&&j.data; if(!seed) return false;
     if(isEnc(seed)){
       if(!_cryptoKey){ const ok=await ensureKey(); if(!ok) return false; }
       var remoteSeed=await decObj(seed, _cryptoKey);
@@ -804,10 +806,39 @@ function injectSyncBadge(){
   if(document.getElementById('syncBadge')) return;
   const b=document.createElement('div'); b.id='syncBadge';
   b.style.cssText='position:fixed;right:10px;bottom:10px;z-index:9999;font-size:12px;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.92);color:#b88;box-shadow:0 2px 10px rgba(0,0,0,.15);cursor:pointer;user-select:none;backdrop-filter:blur(4px);font-family:inherit;';
-  b.title='云端同步 · 点击立即同步';
-  b.onclick=()=>pullSync(false).then(()=>pushSync());
+  b.title='点击恢复/同步历史数据（含相框）';
+  b.onclick=()=>recoverSeed();
   document.body.appendChild(b);
   setSync('off');
+}
+
+/* 一键恢复历史相框/心情：优先用内联种子（不依赖网络），失败再回退 fetch 重试 */
+async function recoverSeed(){
+  let seed=window.WITH_SEED_DATA;
+  if(!seed){
+    for(let i=0;i<3;i++){
+      try{
+        const r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now()+'&r='+i,{cache:'no-store'});
+        if(r.ok && Number(r.headers.get('content-length')||0)>1000){ seed=(await r.json()).data; break; }
+      }catch(e){}
+      await new Promise(s=>setTimeout(s,300));
+    }
+  }
+  if(!seed){ toast('恢复失败：没取到历史数据，请连网后重试'); return; }
+  if(isEnc(seed)){
+    if(!_cryptoKey){ const ok=await ensureKey(); if(!ok) return; }
+    seed=await decObj(seed,_cryptoKey);
+  }
+  const before=((DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0)+((DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0);
+  _suppressPush=true;
+  DB=mergeDB(DB, seed);
+  DB.updated=Math.max(Number(DB.updated)||0, Date.now());
+  save();
+  _suppressPush=false;
+  const after=((DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0)+((DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0);
+  initShowAll(); renderSidebar(); renderView();
+  if(after>before) toast('已为你补回 '+ (after-before) +' 条历史相框/心情 📷');
+  else toast('历史相框已是最新，无需补充');
 }
 
 /* ===================== 云端同步加密（密码锁） ===================== */
@@ -2701,5 +2732,6 @@ function setupAudio(){
 init();
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }); }
 </script>
+<script src="./seed.js"></script>
 </body>
 </html>
