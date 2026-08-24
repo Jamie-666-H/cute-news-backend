@@ -718,7 +718,9 @@ async function pushSync(){
   if(!navigator.onLine){ setSync('off'); return; }
   try{
     setSync('ing');
-    const body=JSON.stringify({updated:DB.updated||0, data:DB});
+    let data=DB;
+    if(_cryptoKey){ data=await encObj(DB, _cryptoKey); }   // 开启密码锁 → 上传密文
+    const body=JSON.stringify({updated:DB.updated||0, data});
     const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),8000);
     const r=await fetch(BACKEND+'/api/sync?key='+encodeURIComponent(SYNC_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body,signal:ctrl.signal});
     clearTimeout(t);
@@ -736,7 +738,12 @@ async function pullSync(silent){
     if(!r.ok) throw 0;
     const j=await r.json();
     if(j&&j.data){
-      const remote=j.data; const ru=Number(remote.updated)||0; const lu=Number(DB.updated)||0;
+      let remote=j.data;
+      if(isEnc(remote)){
+        if(!_cryptoKey){ const ok=await ensureKey(); if(!ok){ setSync('off'); return false; } }
+        remote=await decObj(remote, _cryptoKey);
+      }
+      const ru=Number(remote&&remote.updated)||0; const lu=Number(DB.updated)||0;
       if(ru>lu){
         _suppressPush=true;
         DB=mergeDB(DB, remote);
@@ -767,6 +774,68 @@ function injectSyncBadge(){
   b.onclick=()=>pullSync(false).then(()=>pushSync());
   document.body.appendChild(b);
   setSync('off');
+}
+
+/* ===================== 云端同步加密（密码锁） ===================== */
+// 数据上传前用 AES-GCM 加密，服务器只存密文；密钥由用户密码经 PBKDF2 派生，不离开本机。
+const SYNC_SALT = 'cute-workbench-static-salt-v1';
+let _cryptoKey = null;          // 当前会话的 AES 密钥（仅内存）
+let _keyPromise = null;         // 等待用户输入密码的 Promise
+let _keyResolve = null;         // 解锁弹窗的 resolve 回调
+function bufToB64(buf){ const b=new Uint8Array(buf); let s=''; for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]); return btoa(s); }
+function b64ToBuf(b64){ const s=atob(b64); const b=new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i); return b.buffer; }
+async function deriveKey(pass){
+  const enc=new TextEncoder();
+  const base=await crypto.subtle.importKey('raw', enc.encode(pass), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    {name:'PBKDF2', salt:enc.encode(SYNC_SALT), iterations:120000, hash:'SHA-256'},
+    base, {name:'AES-GCM', length:256}, false, ['encrypt','decrypt']
+  );
+}
+async function encObj(obj, key){
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const plain=enc.encode(JSON.stringify(obj));
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, plain);
+  return {__enc:true, iv:bufToB64(iv), ct:bufToB64(ct)};
+}
+async function decObj(payload, key){
+  const iv=b64ToBuf(payload.iv); const ct=b64ToBuf(payload.ct);
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
+  return JSON.parse(new TextDecoder().decode(plain));
+}
+function isEnc(p){ return p && p.__enc===true && typeof p.iv==='string' && typeof p.ct==='string'; }
+// 确保当前会话有解密密钥：有则直接返回；否则尝试 sessionStorage 里的密码，再不行弹出解锁框
+function ensureKey(){
+  if(_cryptoKey) return Promise.resolve(true);
+  if(_keyPromise) return _keyPromise;
+  _keyPromise=new Promise(async (resolve)=>{
+    const sp=sessionStorage.getItem('syncPass');
+    if(sp){ try{ _cryptoKey=await deriveKey(sp); _keyPromise=null; resolve(true); return; }catch(e){} }
+    openUnlockModal(resolve);
+  });
+  return _keyPromise;
+}
+function openUnlockModal(resolve){
+  _keyResolve=resolve;
+  $('#modal').innerHTML=`<button class="close" data-act="closeUnlock">×</button>
+    <h3>🔑 输入同步密码</h3>
+    <p style="font-size:12px;color:var(--text-soft)">云端数据是加密的，输入密码才能同步。</p>
+    <form data-act="doUnlock">
+      <input type="password" name="pw" placeholder="输入密码" required style="width:100%;margin:8px 0;padding:10px;border-radius:10px;border:1px solid #f0c5d8">
+      <div class="btn-row"><button class="b-pink" type="submit">解锁</button><button class="b-soft" type="button" data-act="closeUnlock">取消</button></div>
+    </form>`;
+  $('#modalMask').classList.add('show');
+}
+function openPassModal(){
+  $('#modal').innerHTML=`<button class="close" data-act="closeSettings">×</button>
+    <h3>🔑 设置同步密码</h3>
+    <p style="font-size:12px;color:var(--text-soft)">密码用于加密云端数据，请牢记（忘记将无法恢复）。</p>
+    <form data-act="doSetSyncPass">
+      <input type="password" name="pw" placeholder="输入密码（至少4位）" required style="width:100%;margin:6px 0;padding:10px;border-radius:10px;border:1px solid #f0c5d8">
+      <input type="password" name="pw2" placeholder="再输一次确认" required style="width:100%;margin:6px 0;padding:10px;border-radius:10px;border:1px solid #f0c5d8">
+      <div class="btn-row"><button class="b-pink" type="submit">确定</button><button class="b-soft" type="button" data-act="closeSettings">取消</button></div>
+    </form>`;
+  $('#modalMask').classList.add('show');
 }
 
 /* ===================== 模块元信息 ===================== */
@@ -2356,6 +2425,20 @@ function handleAct(act,el){
     }
     case 'exportData': exportData(); break;
     case 'clearAll': clearAll(); break;
+    case 'setSyncPass': openPassModal(); break;
+    case 'closeUnlock': {
+      $('#modalMask').classList.remove('show');
+      if(_keyResolve){ _keyResolve(false); _keyResolve=null; _keyPromise=null; }
+      break;
+    }
+    case 'disableSyncLock': {
+      if(!confirm('关闭后云端数据将恢复为明文，确定？')) break;
+      _cryptoKey=null; localStorage.removeItem('syncLockOn'); sessionStorage.removeItem('syncPass');
+      pushSync();
+      toast('已关闭加密（云端恢复明文）');
+      openSettings();
+      break;
+    }
   }
 }
 function handleChange(act,el){
@@ -2404,6 +2487,30 @@ function handleForm(act,form){
     case 'addRandomPool': {
       DB.todo.randomPool.push({id:uid(),text:f.text.value.trim()});
       break; }
+    case 'doSetSyncPass': {
+      const pw=f.pw.value, pw2=f.pw2.value;
+      if(pw.length<4){ toast('密码至少4位'); break; }
+      if(pw!==pw2){ toast('两次输入不一致'); break; }
+      deriveKey(pw).then(async key=>{
+        _cryptoKey=key;
+        localStorage.setItem('syncLockOn','1');
+        sessionStorage.setItem('syncPass',pw);
+        $('#modalMask').classList.remove('show');
+        await pushSync();   // 立即以密文重新上传
+        toast('🔒 已开启加密，云端只存密文');
+      }).catch(()=>toast('设置失败，重试'));
+      break;
+    }
+    case 'doUnlock': {
+      const pw=f.pw.value;
+      deriveKey(pw).then(async key=>{
+        _cryptoKey=key; sessionStorage.setItem('syncPass',pw);
+        $('#modalMask').classList.remove('show');
+        if(_keyResolve){ _keyResolve(true); _keyResolve=null; _keyPromise=null; }
+        pullSync(true).then(()=>pushSync());
+      }).catch(()=>toast('密码错误'));
+      break;
+    }
   }
   save(); form.reset(); renderView();
 }
@@ -2439,7 +2546,13 @@ function openSettings(){
       <button class="b-red" data-act="clearAll">🗑 清空全部数据</button>
       <button class="b-pink" data-act="closeSettings">完成</button>
     </div>
-    <input type="file" id="importFile" accept="application/json" style="display:none">`;
+    <input type="file" id="importFile" accept="application/json" style="display:none">
+    <h4>🔒 云端加密同步（密码锁）</h4>
+    <p style="font-size:12px;color:var(--text-soft);margin-bottom:6px">开启后，上传到云端的数据会用你的密码加密，服务器只存密文、打不开。忘记密码将无法恢复，请牢记。</p>
+    <div class="btn-row">
+      <button class="b-pink" data-act="setSyncPass">🔑 设置同步密码</button>
+      <button class="b-soft" data-act="disableSyncLock" ${localStorage.getItem('syncLockOn')==='1'?'':'style="display:none"'}>🔓 关闭加密</button>
+    </div>`;
   $('#modal').innerHTML=h;
   $('#modalMask').classList.add('show');
   $('#importBtn').addEventListener('click',()=>$('#importFile').click());
@@ -2533,6 +2646,7 @@ async function init(){
   setInterval(renderClock,1000);
   // 云端同步：启动即拉取最新，之后每 45 秒自动双向同步
   injectSyncBadge();
+  if(localStorage.getItem('syncLockOn')==='1'){ try{ await ensureKey(); }catch(e){} }
   pullSync(true).then(()=>pushSync());
   setInterval(()=>{ pullSync(true).then(()=>pushSync()); }, 45000);
 }

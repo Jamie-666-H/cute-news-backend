@@ -69,18 +69,10 @@ exports.handler = async (event) => {
       const data = parseBody(event);
       if (data === null) return json(400, { error: 'bad json' });
       if (JSON.stringify(data).length > 8 * 1024 * 1024) return json(413, { error: 'payload too large (max 8MB)' });
-      const incoming = data.data;
-      const incoming_updated = parseInt(data.updated || 0, 10);
-      const cur = await blobGet('cute-sync', key) || null;
-      let merged;
-      if (cur && cur.data && typeof cur.data === 'object' && incoming && typeof incoming === 'object') {
-        merged = mergeData(cur.data, incoming);
-        merged.updated = Math.max(parseInt(cur.updated || 0, 10), incoming_updated);
-      } else {
-        merged = { updated: incoming_updated, data: incoming };
-      }
-      await blobSet('cute-sync', key, merged);
-      return json(200, merged);
+      // 服务端不解析内容（数据可能已加密），仅原样存储；合并由客户端在拉取时完成
+      const store = { updated: parseInt(data.updated || 0, 10), data: data.data };
+      await blobSet('cute-sync', key, store);
+      return json(200, store);
     }
     return json(405, { error: 'method not allowed' });
   }
