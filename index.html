@@ -2326,8 +2326,7 @@ function renderMood(){
   if(ui.viewDate==null) ui.viewDate=todayStr();
   const vd = ui.viewDate;
   const isToday = vd===todayStr();
-  let h=`<div class="mod-head"><h2>🖼️ 心情相框</h2></div>
-    <p class="mood-tip">长按相框可多选删除 · 想多摆几张就点「🎀 加相框」✨</p>`;
+  let h=`<div class="mod-head"><h2>🖼️ 心情相框</h2></div>`;
   // 所有有记录的日期 → 胶囊，点一下直接看那天（解决“只看到今天一张”的困惑）
   const allDates = [...new Set(DB.mood.plogs.map(p=>p.date).concat(Object.keys(DB.mood.dailyNotes||{})))].sort().reverse();
   if(allDates.length>1){
@@ -2351,9 +2350,7 @@ function renderMood(){
   const frames = DB.mood.plogs.filter(p=>p.date===vd).sort((a,b)=> a.time.localeCompare(b.time));
   h+=`<div class="frame-feed${ui.selMode?' selmode':''}">`;
   if(frames.length===0 && !ui.selMode){
-    const otherDays = allDates.filter(d=>d!==vd && DB.mood.plogs.some(p=>p.date===d)).length;
     h+=`<div class="mood-tip" style="text-align:center;padding:10px 0">这一天还没有相框，点下面的「＋」拍下第一张吧 🌸</div>`;
-    if(otherDays>0) h+=`<div class="mood-tip" style="text-align:center;color:var(--pink-deep);font-weight:700">👆 上面有 ${otherDays} 天还存着相框，点日期胶囊就能看到</div>`;
   }
   for(const p of frames) h+=frameCard(p);
   if(!ui.selMode){
