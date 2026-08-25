@@ -297,7 +297,6 @@
   .card a{color:var(--pink-deep);font-weight:700;text-decoration:none;font-size:13px}
   .card .del{position:absolute;top:10px;right:10px}
   /* --- 心情相框（随手拍小相框 · 俏皮乱摆版） --- */
-  .mood-tip{font-size:12px;color:var(--text-soft);margin:2px 0 12px}
   .frame-feed{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;align-items:start;margin:10px 0 16px}
   .frame{position:relative;background:#fff;padding:9px 9px 8px;border-radius:20px;box-shadow:0 6px 18px rgba(255,143,177,.18);transition:transform .2s ease, box-shadow .2s ease;will-change:transform;transform:rotate(var(--rot,0deg)) translateX(var(--dx,0));margin-top:var(--mt,0)}
   .frame:hover{transform:rotate(var(--rot,0deg)) scale(1.035);box-shadow:0 12px 28px rgba(255,143,177,.30);z-index:3}
@@ -800,7 +799,6 @@ async function loadSeedIfEmpty(){
     _suppressPush=false;
     const after=((DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0)+((DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0);
     initShowAll(); renderSidebar(); renderView();
-    if(after>before) toast('已为你补回之前的相框与心情 📷');
     return after>before;
   }catch(e){ return false; }
 }
@@ -832,7 +830,7 @@ async function recoverSeed(){
       await new Promise(s=>setTimeout(s,300));
     }
   }
-  if(!seed){ toast('恢复失败：没取到历史数据，请连网后重试'); return; }
+  if(!seed) return;
   if(isEnc(seed)){
     if(!_cryptoKey){ const ok=await ensureKey(); if(!ok) return; }
     seed=await decObj(seed,_cryptoKey);
@@ -845,8 +843,6 @@ async function recoverSeed(){
   _suppressPush=false;
   const after=((DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0)+((DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0);
   initShowAll(); renderSidebar(); renderView();
-  if(after>before) toast('已为你补回 '+ (after-before) +' 条历史相框/心情 📷');
-  else toast('历史相框已是最新，无需补充');
 }
 
 /* ===================== 云端同步加密（密码锁） ===================== */
@@ -2349,9 +2345,7 @@ function renderMood(){
   // 该天的相框
   const frames = DB.mood.plogs.filter(p=>p.date===vd).sort((a,b)=> a.time.localeCompare(b.time));
   h+=`<div class="frame-feed${ui.selMode?' selmode':''}">`;
-  if(frames.length===0 && !ui.selMode){
-    h+=`<div class="mood-tip" style="text-align:center;padding:10px 0">这一天还没有相框，点下面的「＋」拍下第一张吧 🌸</div>`;
-  }
+  // 空状态不显示文字提示，只保留“加一帧”占位按钮，保持简洁
   for(const p of frames) h+=frameCard(p);
   if(!ui.selMode){
     for(let i=0;i<ui.frameSlots;i++) h+=`<div class="frame-add" data-act="plogAddFrame"><span class="plus">＋</span><span>加一帧</span></div>`;
