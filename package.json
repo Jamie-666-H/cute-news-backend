@@ -2,9 +2,9 @@
   "name": "cute-workbench",
   "version": "1.0.0",
   "private": true,
-  "description": "我的小天地 · 粉色工作台（Netlify Functions 版后端）",
+  "description": "我的小天地 · 粉色工作台（Cloudflare Pages + Functions 版后端）",
+  "type": "module",
   "dependencies": {
-    "@netlify/blobs": "^6.1.0",
     "web-push": "^3.6.7"
   }
 }

@@ -1,31 +1,39 @@
-/* 主 API 路由：/api/news、/api/reading、/api/weather、/api/sync、/api/ping、/api/push/*
-   通过 netlify.toml 的 /api/* 重定向到这里，event.path = /.netlify/functions/api/<splat> */
-const { blobGet, blobSet, crawl, getReading, getWeather, mergeData, sendPush } = require('./_lib');
+/* Cloudflare Pages Functions 路由入口：捕获 /api/* 任意路径（含 /api/push/subscribe 多级）。
+   用法：请求 /api/news → params.path = ['news']；/api/push/subscribe → ['push','subscribe']。 */
+import { setEnv, blobGet, blobSet, crawl, getReading, getWeather, sendPush } from '../_lib.js';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type'
 };
+
 function json(code, obj, extra) {
-  return { statusCode: code, headers: Object.assign({ 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, CORS, extra || {}), body: JSON.stringify(obj) };
+  return new Response(JSON.stringify(obj), {
+    status: code,
+    headers: Object.assign({ 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }, CORS, extra || {})
+  });
 }
-function parseBody(event) {
-  try { return event.body ? JSON.parse(event.body) : {}; } catch (e) { return null; }
+function parseBody(req) {
+  return req.text().then(t => { try { return t ? JSON.parse(t) : {}; } catch (e) { return null; } });
 }
+function isPing() { return false; }
 
-exports.handler = async (event) => {
-  const p = (event.path || '').replace(/^\/.netlify\/functions\/api/, '').replace(/^\/api/, '') || '/';
-  const method = event.httpMethod || 'GET';
-  const q = event.queryStringParameters || {};
+export async function onRequest(context) {
+  const { request, params, env } = context;
+  setEnv(env); // 注入 Cloudflare 环境变量
+  const p = (params.path || []).join('/'); // 例如 'push/subscribe' 或 'sync'
+  const method = request.method || 'GET';
+  const url = new URL(request.url);
+  const q = Object.fromEntries(url.searchParams.entries());
 
-  if (method === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
+  if (method === 'OPTIONS') return new Response('', { status: 204, headers: CORS });
 
   /* ---- 健康检查 ---- */
-  if (p === '/ping') return json(200, { ok: true });
+  if (p === 'ping') return json(200, { ok: true });
 
-  /* ---- 新闻：优先缓存，过期则即时重抓（压 9s），兜底静态 news.json ---- */
-  if (p === '/news') {
+  /* ---- 新闻 ---- */
+  if (p === 'news') {
     const cached = await blobGet('cute-news', 'latest');
     if (cached && (Date.now() - (cached._ts || 0) < 15 * 60 * 1000)) return json(200, cached);
     try {
@@ -36,14 +44,14 @@ exports.handler = async (event) => {
     } catch (e) {}
     if (cached) return json(200, cached);
     try {
-      const r = await fetch('https://' + (event.headers && event.headers.host) + '/news.json');
+      const r = await fetch(new URL('/news.json', url));
       if (r.ok) { const j = await r.json(); j._ts = Date.now(); return json(200, j); }
     } catch (e) {}
     return json(200, { updated: '', items: [] });
   }
 
   /* ---- 每日阅读 ---- */
-  if (p === '/reading') {
+  if (p === 'reading') {
     const kind = ['all', 'essay', 'ted'].includes(q.type) ? q.type : 'all';
     const item = await getReading(kind);
     if (item) return json(200, Object.assign({ ok: true }, item));
@@ -51,14 +59,14 @@ exports.handler = async (event) => {
   }
 
   /* ---- 天气 ---- */
-  if (p === '/weather') {
+  if (p === 'weather') {
     const lat = parseFloat(q.lat), lon = parseFloat(q.lon);
     if (isNaN(lat) || isNaN(lon)) return json(400, { ok: false, error: 'missing lat/lon' });
     return json(200, await getWeather(lat, lon));
   }
 
   /* ---- 云端同步 ---- */
-  if (p === '/sync') {
+  if (p === 'sync') {
     const key = q.key || '';
     if (!key) return json(400, { error: 'missing key' });
     if (method === 'GET') {
@@ -66,22 +74,22 @@ exports.handler = async (event) => {
       return json(200, rec || { updated: 0, data: null });
     }
     if (method === 'POST') {
-      const data = parseBody(event);
+      const data = await parseBody(request);
       if (data === null) return json(400, { error: 'bad json' });
       if (JSON.stringify(data).length > 8 * 1024 * 1024) return json(413, { error: 'payload too large (max 8MB)' });
-      // 服务端不解析内容（数据可能已加密），仅原样存储；合并由客户端在拉取时完成
       const store = { updated: parseInt(data.updated || 0, 10), data: data.data };
-      await blobSet('cute-sync', key, store);
+      const ok = await blobSet('cute-sync', key, store);
+      if (!ok) return json(200, { ok: false, note: '云端未配置 GH_TOKEN，本次仅本地保存' });
       return json(200, store);
     }
     return json(405, { error: 'method not allowed' });
   }
 
   /* ---- Web Push ---- */
-  if (p.startsWith('/push/')) {
-    const kind = p.slice('/push/'.length);
+  if (p.startsWith('push/')) {
+    const kind = p.slice('push/'.length);
     if (kind === 'subscribe') {
-      const data = parseBody(event);
+      const data = await parseBody(request);
       if (data === null) return json(400, { ok: false, error: 'bad body' });
       const dev = (data.device || '').trim();
       if (!dev || !data.subscription) return json(400, { ok: false, error: 'missing device/subscription' });
@@ -95,7 +103,7 @@ exports.handler = async (event) => {
       return json(200, { ok: true });
     }
     if (kind === 'schedule') {
-      const data = parseBody(event);
+      const data = await parseBody(request);
       const dev = (data && data.device || '').trim();
       const subs = (await blobGet('cute-push', 'subs')) || {};
       if (subs[dev] && subs[dev].subscription) {
@@ -106,7 +114,7 @@ exports.handler = async (event) => {
       return json(200, { ok: true });
     }
     if (kind === 'unsubscribe') {
-      const data = parseBody(event);
+      const data = await parseBody(request);
       const dev = (data && data.device || '').trim();
       const subs = (await blobGet('cute-push', 'subs')) || {};
       delete subs[dev];
@@ -128,5 +136,5 @@ exports.handler = async (event) => {
     return json(404, { ok: false, error: 'unknown push route' });
   }
 
-  return { statusCode: 404, headers: CORS, body: 'Not Found' };
-};
+  return new Response('Not Found', { status: 404, headers: CORS });
+}

@@ -1,86 +1,97 @@
-/* 共享库：新闻抓取 / 阅读源 / 天气 / Web Push / Netlify Blobs 存储
-   被 api.js、news-refresh.js、push-check.js 复用。CommonJS 以便与 web-push 互操作。 */
-const webpush = require('web-push');
-const { getStore } = require('@netlify/blobs');
+/* 共享库：新闻抓取 / 阅读源 / 天气 / Web Push / GitHub 存储
+   Cloudflare Pages Functions 版（ESM + node_compat）。
+   原 Netlify 版中 @netlify/blobs 已弃用，同步数据统一持久化到 GitHub 仓库，
+   避免 Cloudflare 多实例无共享内存导致数据丢失。 */
+import webpush from 'web-push';
 
-/* ---------------- VAPID（Web Push 凭证） ---------------- */
-const VAPID_PUBLIC = process.env.VAPID_PUBLIC || 'BGsde9o-MzxqNO0vzu6VPhPq__PNTzqx_GwgNBNvMcTkbQcx3QVtBBIer3qU1tvx3SfwKjZM1rq6YEGpM85wchA';
-const VAPID_PRIVATE = process.env.VAPID_PRIVATE || 'VxW2gdyFJF3bQ78B7PgVLSoSdriLRiI5wiDyEcYB-7Q';
-const VAPID_SUBJECT = 'mailto:cute-workbench@example.com';
-try { webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE); } catch (e) {}
+/* ---------------- 运行时环境变量（由 [[path]].js 在请求时注入） ---------------- */
+let RUNTIME_ENV = {};
+export function setEnv(e) {
+  RUNTIME_ENV = e || {};
+  try {
+    const pub = env('VAPID_PUBLIC');
+    const pri = env('VAPID_PRIVATE');
+    if (pub && pri) webpush.setVapidDetails('mailto:cute-workbench@example.com', pub, pri);
+  } catch (err) {}
+}
+function env(key, def) {
+  if (RUNTIME_ENV && RUNTIME_ENV[key] !== undefined) return RUNTIME_ENV[key];
+  if (typeof process !== 'undefined' && process.env && process.env[key] !== undefined) return process.env[key];
+  return def;
+}
 
-/* ---------------- 用户同步存储 ----------------
-   优先写回 GitHub 仓库（免费、持久、不占 Netlify 流量）：sync_store.json。
-   需要环境变量 GH_TOKEN（对 Jamie-666-H/cute-news-backend 有 write 权限的 PAT）。
-   无 token 时退化为内存存储（仅本次进程有效，用于调试/兼容）。 */
-const GH_REPO = process.env.GH_REPO || 'Jamie-666-H/cute-news-backend';
-const GH_TOKEN = process.env.GH_TOKEN || '';
-const GH_BRANCH = process.env.GH_BRANCH || 'data';   // 同步数据单独放 data 分支，避免污染 main
-// 每个 store 对应仓库里的一个 JSON 文件（结构：按键存值）
+/* ---------------- VAPID（Web Push 凭证，默认值兜底，建议用环境变量覆盖） ---------------- */
+function VAPID_PUBLIC() { return env('VAPID_PUBLIC', 'BGsde9o-MzxqNO0vzu6VPhPq__PNTzqx_GwgNBNvMcTkbQcx3QVtBBIer3qU1tvx3SfwKjZM1rq6YEGpM85wchA'); }
+function VAPID_PRIVATE() { return env('VAPID_PRIVATE', 'VxW2gdyFJF3bQ78B7PgVLSoSdriLRiI5wiDyEcYB-7Q'); }
+
+/* ---------------- 用户同步存储（GitHub 持久化，必须配 GH_TOKEN） ----------------
+   Cloudflare 多实例无共享内存，同步数据必须落盘到 GitHub 仓库（免费、持久）：
+   sync_store.json / push_subs.json，放在独立 data 分支，避免污染 main。 */
+function GH_REPO() { return env('GH_REPO', 'Jamie-666-H/cute-news-backend'); }
+function GH_TOKEN() { return env('GH_TOKEN', ''); }
+function GH_BRANCH() { return env('GH_BRANCH', 'data'); }
 const FILE_OF = { 'cute-sync': 'sync_store.json', 'cute-push': 'push_subs.json' };
-const _mem = {};
 
 async function ghGet(path) {
-  const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}?ref=${GH_BRANCH}`;
-  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  const url = `https://api.github.com/repos/${GH_REPO()}/contents/${path}?ref=${GH_BRANCH()}`;
+  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
   if (!r.ok) return null;
   const j = await r.json();
   if (!j.content) return null;
   return { sha: j.sha, text: Buffer.from(j.content, j.encoding || 'base64').toString('utf-8') };
 }
 async function ghEnsureBranch() {
-  const url = `https://api.github.com/repos/${GH_REPO}/git/refs/heads/${GH_BRANCH}`;
-  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  const url = `https://api.github.com/repos/${GH_REPO()}/git/refs/heads/${GH_BRANCH()}`;
+  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
   if (r.ok) return true;
-  const main = await fetch(`https://api.github.com/repos/${GH_REPO}/git/ref/heads/main`, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  const main = await fetch(`https://api.github.com/repos/${GH_REPO()}/git/ref/heads/main`, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
   if (!main.ok) return false;
   const mj = await main.json();
   const sha = mj.object && mj.object.sha; if (!sha) return false;
-  const cr = await fetch(`https://api.github.com/repos/${GH_REPO}/git/refs`, {
+  const cr = await fetch(`https://api.github.com/repos/${GH_REPO()}/git/refs`, {
     method: 'POST',
-    headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ref: `refs/heads/${GH_BRANCH}`, sha })
+    headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref: `refs/heads/${GH_BRANCH()}`, sha })
   });
   return cr.ok;
 }
 async function ghPut(path, content, sha) {
   await ghEnsureBranch();
-  const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
-  const body = { message: 'sync: update user data', content: Buffer.from(content, 'utf-8').toString('base64'), branch: GH_BRANCH };
+  const url = `https://api.github.com/repos/${GH_REPO()}/contents/${path}`;
+  const body = { message: 'sync: update user data', content: Buffer.from(content, 'utf-8').toString('base64'), branch: GH_BRANCH() };
   if (sha) body.sha = sha;
-  const r = await fetch(url, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const r = await fetch(url, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   return r.ok;
 }
 
 async function blobGet(name, key) {
   const file = FILE_OF[name];
-  if (GH_TOKEN && file) {
-    try {
-      const f = await ghGet(file);
-      if (!f) return null;
-      const all = JSON.parse(f.text);
-      return all[key] || null;
-    } catch (e) { console.error('ghGet fail', name, e && e.message); }
+  if (!GH_TOKEN() || !file) {
+    if (!GH_TOKEN()) console.error('[sync] 未配置 GH_TOKEN，无法读取云端数据（数据仅存本地）');
+    return null;
   }
-  if (_mem[name] && _mem[name][key]) return _mem[name][key];
-  return null;
+  try {
+    const f = await ghGet(file);
+    if (!f) return null;
+    const all = JSON.parse(f.text);
+    return all[key] || null;
+  } catch (e) { console.error('ghGet fail', name, e && e.message); return null; }
 }
 async function blobSet(name, key, val) {
   const file = FILE_OF[name];
-  if (GH_TOKEN && file) {
-    try {
-      const f = await ghGet(file);
-      let all = {};
-      if (f) { try { all = JSON.parse(f.text); } catch (e) { all = {}; } }
-      all[key] = val;
-      const str = JSON.stringify(all);
-      if (str.length > 9 * 1024 * 1024) { console.error('store too large, skip', name); return false; }
-      return await ghPut(file, str, f && f.sha);
-    } catch (e) { console.error('ghPut fail', name, e && e.message); return false; }
+  if (!GH_TOKEN() || !file) {
+    console.error('[sync] 未配置 GH_TOKEN，云端同步不可用（数据仅存本地）');
+    return false;
   }
-  if (!_mem[name]) _mem[name] = {};
-  _mem[name][key] = val;
-  return true;
+  try {
+    const f = await ghGet(file);
+    let all = {};
+    if (f) { try { all = JSON.parse(f.text); } catch (e) { all = {}; } }
+    all[key] = val;
+    const str = JSON.stringify(all);
+    if (str.length > 9 * 1024 * 1024) { console.error('store too large, skip', name); return false; }
+    return await ghPut(file, str, f && f.sha);
+  } catch (e) { console.error('ghPut fail', name, e && e.message); return false; }
 }
 
 /* ---------------- 通用抓取工具 ---------------- */
@@ -300,7 +311,7 @@ const READ_SOURCES = {
 };
 async function getReading(kind) {
   const order = (READ_SOURCES[kind] || READ_SOURCES.all).slice();
-  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[order[i], order[j]] = [order[j], order[i]]; }
+  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
   let last = null;
   for (const fn of order) {
     try { const item = await fn(); if (item && (item.zh || item.en)) { last = item; return item; } } catch (e) {}
@@ -337,7 +348,7 @@ async function getWeather(lat, lon) {
   }
 }
 
-/* ---------------- 用户数据合并（云端同步） ---------------- */
+/* ---------------- 用户数据合并（云端同步，合并逻辑仍在客户端完成） ---------------- */
 function mergeValue(lv, rv) {
   if (rv && typeof rv === 'object' && !Array.isArray(rv) && lv && typeof lv === 'object' && !Array.isArray(lv)) {
     const out = Object.assign({}, lv);
@@ -372,7 +383,4 @@ async function sendPush(sub, title, body, url = '/') {
   }
 }
 
-module.exports = {
-  blobGet, blobSet, crawl, getReading, getWeather, mergeData, sendPush,
-  VAPID_PUBLIC, VAPID_PRIVATE
-};
+export { blobGet, blobSet, crawl, getReading, getWeather, mergeData, sendPush };
