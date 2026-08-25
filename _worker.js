@@ -30,18 +30,18 @@ function GH_BRANCH() { return env('GH_BRANCH', 'data'); }
 const FILE_OF = { 'cute-sync': 'sync_store.json', 'cute-push': 'push_subs.json' };
 
 async function ghGet(path) {
-  const url = `https://api.github.com/repos/${GH_REPO()}/contents/${path}?ref=${GH_BRANCH()}`;
-  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  // 注意：GitHub Contents API 仅在文件 ≤1MB 时内联返回 content；大文件(同步数据常超1MB)必须走 raw 域名
+  const url = `https://raw.githubusercontent.com/${GH_REPO()}/${GH_BRANCH()}/${path}`;
+  const r = await fetch(url, { headers: { 'User-Agent': 'cute-workbench' } });
   if (!r.ok) return null;
-  const j = await r.json();
-  if (!j.content) return null;
-  return { sha: j.sha, text: Buffer.from(j.content, j.encoding || 'base64').toString('utf-8') };
+  const text = await r.text();
+  return { sha: '', text };
 }
 async function ghEnsureBranch() {
   const url = `https://api.github.com/repos/${GH_REPO()}/git/refs/heads/${GH_BRANCH()}`;
-  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' } });
   if (r.ok) return true;
-  const main = await fetch(`https://api.github.com/repos/${GH_REPO()}/git/ref/heads/main`, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  const main = await fetch(`https://api.github.com/repos/${GH_REPO()}/git/ref/heads/main`, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' } });
   if (!main.ok) return false;
   const mj = await main.json();
   const sha = mj.object && mj.object.sha; if (!sha) return false;
@@ -52,13 +52,27 @@ async function ghEnsureBranch() {
   });
   return cr.ok;
 }
+// 写入走 Git Data API（blob/tree/commit），突破 Contents API 的 1MB 限制，支持大文件
 async function ghPut(path, content, sha) {
   await ghEnsureBranch();
-  const url = `https://api.github.com/repos/${GH_REPO()}/contents/${path}`;
-  const body = { message: 'sync: update user data', content: Buffer.from(content, 'utf-8').toString('base64'), branch: GH_BRANCH() };
-  if (sha) body.sha = sha;
-  const r = await fetch(url, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  return r.ok;
+  const repo = GH_REPO(); const branch = GH_BRANCH();
+  const api = 'https://api.github.com/repos/' + repo;
+  const AUTH = { 'Authorization': 'Bearer ' + GH_TOKEN(), 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' };
+  try {
+    const refR = await fetch(api + '/git/ref/heads/' + branch, { headers: AUTH });
+    if (!refR.ok) return false;
+    const baseSha = (await refR.json()).object.sha;
+    const commitJ = await (await fetch(api + '/git/commits/' + baseSha, { headers: AUTH })).json();
+    const baseTree = commitJ.tree.sha;
+    const blobJ = await (await fetch(api + '/git/blobs', { method: 'POST', headers: { ...AUTH, 'Content-Type': 'application/json' }, body: JSON.stringify({ content: Buffer.from(content, 'utf-8').toString('base64'), encoding: 'base64' }) })).json();
+    if (!blobJ.sha) return false;
+    const treeJ = await (await fetch(api + '/git/trees', { method: 'POST', headers: { ...AUTH, 'Content-Type': 'application/json' }, body: JSON.stringify({ base_tree: baseTree, tree: [{ path, mode: '100644', type: 'blob', sha: blobJ.sha }] }) })).json();
+    if (!treeJ.sha) return false;
+    const newCommitJ = await (await fetch(api + '/git/commits', { method: 'POST', headers: { ...AUTH, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'sync: update user data', tree: treeJ.sha, parents: [baseSha] }) })).json();
+    if (!newCommitJ.sha) return false;
+    const updR = await fetch(api + '/git/refs/heads/' + branch, { method: 'PATCH', headers: { ...AUTH, 'Content-Type': 'application/json' }, body: JSON.stringify({ sha: newCommitJ.sha }) });
+    return updR.ok;
+  } catch (e) { console.error('ghPut fail', e && e.message); return false; }
 }
 
 async function blobGet(name, key) {
