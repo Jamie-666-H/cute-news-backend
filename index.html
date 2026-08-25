@@ -2331,17 +2331,6 @@ function renderMood(){
   const vd = ui.viewDate;
   const isToday = vd===todayStr();
   let h=`<div class="mod-head"><h2>🖼️ 心情相框</h2></div>`;
-  // 所有有记录的日期 → 胶囊，点一下直接看那天（解决“只看到今天一张”的困惑）
-  const allDates = [...new Set(DB.mood.plogs.map(p=>p.date).concat(Object.keys(DB.mood.dailyNotes||{})))].sort().reverse();
-  if(allDates.length>1){
-    h+=`<div class="plog-chips">`;
-    for(const d of allDates){
-      const n = DB.mood.plogs.filter(p=>p.date===d).length;
-      const on = (d===vd)?' on':'';
-      h+=`<button class="chip${on}" data-act="plogGoDate" data-date="${d}">${d.slice(5).replace('-','/')}${n?` <span class="n">${n}张</span>`:''}</button>`;
-    }
-    h+=`</div>`;
-  }
   h+=`<div class="plog-bar">
       <button class="nav" data-act="plogPrevDay" title="前一天">‹</button>
       <button class="cur" data-act="plogOpenCal" title="打开日历选择日期">📅 ${fmtDateCn(vd)}${isToday?' · 今天':''}</button>
