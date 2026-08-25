@@ -413,10 +413,10 @@ function isPing() { return false; }
 export async function onRequest(context) {
   const { request, params, env } = context;
   setEnv(env); // 注入 Cloudflare 环境变量
+  const url = new URL(request.url);
   const pathParts = url.pathname.replace(/^\/api\//, '').split('/').filter(Boolean);
   const p = pathParts.join('/'); // 例如 'push/subscribe' 或 'sync'
   const method = request.method || 'GET';
-  const url = new URL(request.url);
   const q = Object.fromEntries(url.searchParams.entries());
 
   if (method === 'OPTIONS') return new Response('', { status: 204, headers: CORS });
