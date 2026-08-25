@@ -335,12 +335,6 @@
   .plog-daynote{width:100%;border:2px dashed var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:13px;line-height:1.5;color:var(--text);box-sizing:border-box;background:#fffdfe;resize:vertical;min-height:46px;margin-bottom:6px}
   .plog-daynote:focus{outline:none;border-color:var(--pink)}
   .plog-daynote::placeholder{color:#d9a7b8}
-  /* 有照片的日期胶囊，点一下直接看那天 */
-  .plog-chips{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
-  .plog-chips .chip{border:none;background:var(--pink-soft);color:var(--pink-deep);border-radius:999px;padding:5px 11px;font-size:11.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;transition:transform .12s,background .12s}
-  .plog-chips .chip:hover{transform:scale(1.05);background:#ffd9e7}
-  .plog-chips .chip.on{background:var(--pink);color:#fff}
-  .plog-chips .chip .n{font-size:10px;opacity:.85}
   /* 长按多选删除 */
   .frame{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
   .frame-cap{user-select:text;-webkit-user-select:text}
@@ -2435,7 +2429,6 @@ function handleAct(act,el){
     case 'plogPrevDay': ui.viewDate=shiftDate(ui.viewDate,-1); ui.selMode=false; ui.selIds=[]; renderView(); break;
     case 'plogNextDay': ui.viewDate=shiftDate(ui.viewDate,1); ui.selMode=false; ui.selIds=[]; renderView(); break;
     case 'plogToday': ui.viewDate=todayStr(); ui.selMode=false; ui.selIds=[]; renderView(); break;
-    case 'plogGoDate': ui.viewDate=el.dataset.date; ui.selMode=false; ui.selIds=[]; renderView(); break;
     case 'plogOpenCal': renderCalendar(); $('#calMask').classList.add('show'); break;
     case 'plogCalPrev': { ui.calM--; if(ui.calM<0){ui.calM=11;ui.calY--;} renderCalendar(); break; }
     case 'plogCalNext': { ui.calM++; if(ui.calM>11){ui.calM=0;ui.calY++;} renderCalendar(); break; }
