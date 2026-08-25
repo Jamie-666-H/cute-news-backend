@@ -719,11 +719,20 @@ function mergeDB(local, remote){
 }
 async function pushSync(){
   if(!navigator.onLine){ setSync('off'); return; }
+  // 防空壳覆盖：本地没有任何相框照片时，绝不把“空”上传覆盖云端（避免清空云端照片）
+  const _pl=(DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0;
+  if(_pl===0){ console.warn('[sync] 本地暂无照片，已暂停上传以防覆盖云端照片'); setSync('off'); return; }
   try{
     setSync('ing');
-    let data=DB;
-    if(_cryptoKey){ data=await encObj(DB, _cryptoKey); }   // 开启密码锁 → 上传密文
-    const body=JSON.stringify({updated:DB.updated||0, data});
+    // 上传前先合并云端，避免用本地部分数据覆盖云端导致历史丢失
+    let merged=DB;
+    try{
+      const pr=await fetch(BACKEND+'/api/sync?key='+encodeURIComponent(SYNC_KEY),{cache:'no-store'});
+      if(pr.ok){ const pj=await pr.json(); if(pj&&pj.data){ let rd=pj.data; if(isEnc(rd)){ rd=_cryptoKey?await decObj(rd,_cryptoKey):DB; } if(rd&&rd!==DB){ merged=mergeDB(DB, rd); } } }
+    }catch(e){}
+    let data=merged;
+    if(_cryptoKey){ data=await encObj(merged, _cryptoKey); }
+    const body=JSON.stringify({updated:Math.max(Number(DB.updated)||0, Number(merged.updated)||0), data});
     const ctrl=new AbortController(); const t=setTimeout(()=>ctrl.abort(),8000);
     const r=await fetch(BACKEND+'/api/sync?key='+encodeURIComponent(SYNC_KEY),{method:'POST',headers:{'Content-Type':'application/json'},body,signal:ctrl.signal});
     clearTimeout(t);
@@ -774,12 +783,17 @@ async function loadSeedIfEmpty(){
   try{
     const localPlen=(DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0;
     const localElen=(DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0;
-    // 本地已经齐全（≥5张相框且≥2条心情），无需补种子
-    if(localPlen>=5 && localElen>=2){ return false; }
+    // 本地已经较齐全（≥8张相框且≥2条心情），大概率无需补种子
+    if(localPlen>=8 && localElen>=2){ return false; }
     let j=null, seed=window.WITH_SEED_DATA;
     if(!seed){
-      const r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now(),{cache:'no-store'});
-      if(!r.ok || !r.headers.get('content-length') || Number(r.headers.get('content-length'))<1000){
+      // 优先从同源（GitHub Pages）读取保底种子，避免依赖 workers.dev / raw 缓存；失败再退回 BACKEND
+      let r=null;
+      try{ r=await fetch(location.origin+'/seed-sync.json?t='+Date.now(),{cache:'no-store'}); }catch(e){ r=null; }
+      if(!r || !r.ok){
+        try{ r=await fetch(BACKEND+'/seed-sync.json?t='+Date.now(),{cache:'no-store'}); }catch(e){ r=null; }
+      }
+      if(!r || !r.ok || !r.headers.get('content-length') || Number(r.headers.get('content-length'))<1000){
         return false; // 种子没取到（或被边缘缓存成空壳），下次同步再试，不一次性放弃
       }
       j=await r.json(); seed=j&&j.data; if(!seed) return false;
