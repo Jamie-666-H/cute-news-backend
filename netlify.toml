@@ -19,3 +19,16 @@
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+
+# 禁止 Netlify Edge 长期缓存 index.html 与 sw.js，确保代码更新能及时生效
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate, no-cache"
+    Netlify-Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Netlify-Cache-Control = "public, max-age=0, must-revalidate"

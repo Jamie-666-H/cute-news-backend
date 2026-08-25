@@ -15,21 +15,38 @@ try { webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE); } cat
    无 token 时退化为内存存储（仅本次进程有效，用于调试/兼容）。 */
 const GH_REPO = process.env.GH_REPO || 'Jamie-666-H/cute-news-backend';
 const GH_TOKEN = process.env.GH_TOKEN || '';
+const GH_BRANCH = process.env.GH_BRANCH || 'data';   // 同步数据单独放 data 分支，避免污染 main
 // 每个 store 对应仓库里的一个 JSON 文件（结构：按键存值）
 const FILE_OF = { 'cute-sync': 'sync_store.json', 'cute-push': 'push_subs.json' };
 const _mem = {};
 
 async function ghGet(path) {
-  const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
+  const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}?ref=${GH_BRANCH}`;
   const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
   if (!r.ok) return null;
   const j = await r.json();
   if (!j.content) return null;
   return { sha: j.sha, text: Buffer.from(j.content, j.encoding || 'base64').toString('utf-8') };
 }
+async function ghEnsureBranch() {
+  const url = `https://api.github.com/repos/${GH_REPO}/git/refs/heads/${GH_BRANCH}`;
+  const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  if (r.ok) return true;
+  const main = await fetch(`https://api.github.com/repos/${GH_REPO}/git/ref/heads/main`, { headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+  if (!main.ok) return false;
+  const mj = await main.json();
+  const sha = mj.object && mj.object.sha; if (!sha) return false;
+  const cr = await fetch(`https://api.github.com/repos/${GH_REPO}/git/refs`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ref: `refs/heads/${GH_BRANCH}`, sha })
+  });
+  return cr.ok;
+}
 async function ghPut(path, content, sha) {
+  await ghEnsureBranch();
   const url = `https://api.github.com/repos/${GH_REPO}/contents/${path}`;
-  const body = { message: 'sync: update user data', content: Buffer.from(content, 'utf-8').toString('base64') };
+  const body = { message: 'sync: update user data', content: Buffer.from(content, 'utf-8').toString('base64'), branch: GH_BRANCH };
   if (sha) body.sha = sha;
   const r = await fetch(url, { method: 'PUT', headers: { 'Authorization': 'Bearer ' + GH_TOKEN, 'User-Agent': 'cute-workbench', 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   return r.ok;
