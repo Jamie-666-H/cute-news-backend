@@ -799,6 +799,11 @@ async function loadSeedIfEmpty(){
     DB=mergeDB(DB, remoteSeed);  // 数组合并按 id 去重：历史补全 + 本地今天的记录保留
     DB.updated=Math.max(Number(DB.updated)||0, Number(j.updated)||0);
     save();
+    // 今天没照片时，自动跳到最近有照片的那天，避免“空白以为没数据”
+    if(((DB.mood&&DB.mood.plogs)||[]).filter(p=>p.date===ui.viewDate).length===0){
+      const ds=[...new Set(((DB.mood&&DB.mood.plogs)||[]).map(p=>p.date))].sort().reverse();
+      if(ds.length) ui.viewDate=ds[0];
+    }
     _suppressPush=false;
     const after=((DB.mood&&DB.mood.plogs&&DB.mood.plogs.length)||0)+((DB.mood&&DB.mood.entries&&DB.mood.entries.length)||0);
     initShowAll(); renderSidebar(); renderView();
