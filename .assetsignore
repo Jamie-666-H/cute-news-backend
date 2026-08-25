@@ -1,0 +1,9 @@
+# 不要把这些文件当作静态资源上传到 Cloudflare
+_worker.js
+wrangler.toml
+package.json
+package-lock.json
+node_modules/
+.git/
+.cf_bak/
+.netlify/

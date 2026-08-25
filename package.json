@@ -1,9 +1,9 @@
 {
-  "name": "cute-workbench",
-  "version": "1.0.0",
+  "name": "cute-news-backend",
   "private": true,
-  "description": "我的小天地 · 粉色工作台（Cloudflare Pages + Functions 版后端）",
-  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
   "dependencies": {
     "web-push": "^3.6.7"
   }

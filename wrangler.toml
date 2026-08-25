@@ -1,15 +1,18 @@
-# Cloudflare Pages 项目配置（通过 Wrangler 或直接连 Git 部署）
-# 说明：本项目是纯静态前端 + Pages Functions 后端，无需构建命令。
+# Cloudflare Workers + Static Assets 配置
+# 本站点是单文件 SPA + /api/* 后端，静态资源与 Worker 一起部署。
 name = "cute-workbench"
-pages_build_output_dir = "."
+main = "_worker.js"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 
-# 环境变量（也可在 Cloudflare Dashboard → Pages → Settings → Environment variables 配置）
-# 敏感变量（VAPID_PRIVATE / GH_TOKEN）不要明文写仓库，用下面命令加密后注入，或直接 Dashboard 勾选 Encrypt：
-#   npx wrangler pages secret put GH_TOKEN --project-name=cute-workbench
-#   npx wrangler pages secret put VAPID_PRIVATE --project-name=cute-workbench
-# [vars] 仅放置非敏感变量；敏感变量请用 secret put。
+[assets]
+# 仓库根目录即为静态资源目录（index.html / seed.js / sw.js 等）
+directory = "."
+binding = "ASSETS"
+# SPA 行为：非静态资源路径返回 index.html，让前端路由接管
+not_found_handling = "single-page-application"
+
+# 非敏感环境变量（敏感变量请在 Dashboard 或 wrangler secret put 设置）
 [vars]
 VAPID_PUBLIC = "BGsde9o-MzxqNO0vzu6VPhPq__PNTzqx_GwgNBNvMcTkbQcx3QVtBBIer3qU1tvx3SfwKjZM1rq6YEGpM85wchA"
 GH_REPO = "Jamie-666-H/cute-news-backend"
