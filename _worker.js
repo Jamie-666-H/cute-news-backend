@@ -1,9 +1,7 @@
 /* Cloudflare Workers + Static Assets 入口
    静态资源由 wrangler.toml [assets] 自动托管；
    /api/* 请求走下面逻辑；其余回退到 env.ASSETS.fetch()。 */
-import webpush from 'web-push';
-
-/* 共享库：新闻抓取 / 阅读源 / 天气 / Web Push / GitHub 存储
+/* 共享库：新闻抓取 / 阅读源 / 天气 / GitHub 存储
    Cloudflare Pages Functions 版（ESM + node_compat）。
    原 Netlify 版中 @netlify/blobs 已弃用，同步数据统一持久化到 GitHub 仓库，
    避免 Cloudflare 多实例无共享内存导致数据丢失。 */
@@ -12,11 +10,6 @@ import webpush from 'web-push';
 let RUNTIME_ENV = {};
 function setEnv(e) {
   RUNTIME_ENV = e || {};
-  try {
-    const pub = env('VAPID_PUBLIC');
-    const pri = env('VAPID_PRIVATE');
-    if (pub && pri) webpush.setVapidDetails('mailto:cute-workbench@example.com', pub, pri);
-  } catch (err) {}
 }
 function env(key, def) {
   if (RUNTIME_ENV && RUNTIME_ENV[key] !== undefined) return RUNTIME_ENV[key];
@@ -376,15 +369,13 @@ function mergeData(local, remote) {
 }
 
 /* ---------------- Web Push 发送 ---------------- */
+/* ---------------- Web Push 发送 ----------------
+   注意：Cloudflare Workers 运行时无法打包 Node 的 web-push（依赖 https 模块），
+   故此处不再引入该依赖。订阅数据仍由 /api/push/* 正常存储，便于后续用
+   WebCrypto+VAPID 或外部调度器实现真正的到点提醒。当前发送优雅降级返回 false。 */
 async function sendPush(sub, title, body, url = '/') {
-  if (!sub) return false;
-  try {
-    await webpush.sendNotification(sub, JSON.stringify({ title, body, url }), {});
-    return true;
-  } catch (e) {
-    if (e && (e.statusCode === 404 || e.statusCode === 410)) return 'expired';
-    return false;
-  }
+  // 暂未启用服务端推送（Workers 免费档无 Cron，且需改用 WebCrypto 实现 VAPID）
+  return false;
 }
 
 

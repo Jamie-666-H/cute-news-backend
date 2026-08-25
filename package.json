@@ -3,8 +3,5 @@
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy"
-  },
-  "dependencies": {
-    "web-push": "^3.6.7"
   }
 }
